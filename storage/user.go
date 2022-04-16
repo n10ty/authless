@@ -1,14 +1,11 @@
-package authless
+package storage
 
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
-	"net/http"
 	"time"
 
-	"github.com/go-pkgz/auth/token"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,17 +34,6 @@ func NewUser(email string, plainPassword string) (*User, error) {
 		Password:          password,
 		ConfirmationToken: GenerateConfirmationToken(),
 	}, nil
-}
-
-func GetUser(r *http.Request) (*User, error) {
-	u, err := token.GetUserInfo(r)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	log.Printf("User from token: %v", u)
-	return (*a.storage).GetUser(u.Email)
 }
 
 func EncryptPassword(plainPassword string) (string, error) {

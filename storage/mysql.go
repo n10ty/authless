@@ -1,4 +1,4 @@
-package authless
+package storage
 
 import (
 	"database/sql"
@@ -22,7 +22,7 @@ type MysqlStorage struct {
 //	Dbname   string
 //}
 
-func NewMysqlStorage(config StorageConfig) (*MysqlStorage, error) {
+func NewMysqlStorage(config Config) (*MysqlStorage, error) {
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local",
 		config.Username,

@@ -1,4 +1,4 @@
-package authless
+package storage
 
 import (
 	"errors"
@@ -6,32 +6,39 @@ import (
 
 type storageType = string
 
-const storageTypeMysql = "mysql"
-const storageTypePostgres = "postgres"
-const storageTypeCloud = "cloud"
+const (
+	storageTypeMysql    = "mysql"
+	storageTypePostgres = "postgres"
+	storageTypeCloud    = "cloud"
+	storageTypeConst    = "const"
+)
 
 var ErrUserNotFound = errors.New("user not found")
 
 type Storage interface {
-	AuthenticateUser(user, password string) (bool, error)
+	AuthenticateUser(email, password string) (bool, error)
 	CreateUser(user *User) error
 	GetUser(email string) (*User, error)
 }
 
-type StorageConfig struct {
+type Config struct {
 	Type     storageType
 	Host     string
 	Port     int
 	Username string
 	Password string
 	Dbname   string
+	Users    map[string]string
 }
 
-func NewStorage(config StorageConfig) (Storage, error) {
+func NewStorage(config Config) (Storage, error) {
 	//var storage *Storage
 	switch config.Type {
 	case storageTypeMysql:
 		return NewMysqlStorage(config)
+	case storageTypeConst:
+		// todo read from config
+		return NewConst(config.Users)
 	default:
 		return nil, errors.New("Unknown storage type: " + config.Type)
 	}

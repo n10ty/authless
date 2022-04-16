@@ -9,3 +9,5 @@ storage:
   username: root
   password: 12345
   dbname: test_auth
+  users:
+    - admin: 123

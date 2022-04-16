@@ -10,6 +10,7 @@ import (
 	"github.com/go-pkgz/auth/avatar"
 	"github.com/go-pkgz/auth/provider"
 	"github.com/go-pkgz/auth/token"
+	"github.com/n10ty/authless/storage"
 	"github.com/spf13/viper"
 )
 
@@ -19,7 +20,7 @@ const AuthTypeRedirect = "redirect"
 const AuthTypeAPI = "api"
 
 type Auth struct {
-	storage *Storage
+	storage *storage.Storage
 	config  *Config
 	auth    *authService.Service
 }
@@ -29,7 +30,7 @@ func initAuth(configPath string) error {
 	if err != nil {
 		return err
 	}
-	storage, err := NewStorage(config.Storage)
+	storage, err := storage.NewStorage(config.Storage)
 	if err != nil {
 		return err
 	}
@@ -49,11 +50,11 @@ type Config struct {
 	DisableXSRF    bool
 	TokenDuration  time.Duration
 	CookieDuration time.Duration
-	Storage        StorageConfig
+	Storage        storage.Config
 	Type           string // redirect or api
 }
 
-func newAuthService(config *Config, storage *Storage) *authService.Service {
+func newAuthService(config *Config, storage *storage.Storage) *authService.Service {
 	opts := config.toLibCfg()
 	a := authService.NewService(opts)
 

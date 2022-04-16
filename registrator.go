@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+
+	"github.com/n10ty/authless/storage"
 )
 
 func (a *Auth) register(w http.ResponseWriter, r *http.Request) {
@@ -30,13 +32,13 @@ func (a *Auth) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err := (*a.storage).GetUser(email)
-	if err != nil && !errors.Is(err, ErrUserNotFound) {
+	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
 		log.Printf("internal error: %s", err)
 		http.Redirect(w, r, "/register?error=Email already exists", http.StatusMovedPermanently)
 		return
 	}
 
-	user, err := NewUser(email, password)
+	user, err := storage.NewUser(email, password)
 	if err != nil {
 		log.Printf("internal error: %s", err)
 		http.Redirect(w, r, "/register?error=Internal error", http.StatusMovedPermanently)
