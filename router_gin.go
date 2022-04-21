@@ -1,7 +1,6 @@
 package authless
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -44,16 +43,19 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	authRoutes, _ := g.auth.auth.Handlers()
 	router.LoadHTMLGlob("template/*")
 	router.Any("/auth/*auth", gin.WrapH(authRoutes))
-	router.GET("/login", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "login.html", gin.H{"error": c.Query("error")})
-	})
-	router.GET("/register", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "register.html", gin.H{"error": c.Query("error")})
-	})
-	router.POST("/register", g.register)
 	router.GET("/success", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "success.html", nil)
 	})
+	router.POST("/register", g.register)
+
+	if g.auth.config.Type == AuthTypeRedirect {
+		router.GET("/register", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "register.html", gin.H{"error": c.Query("error")})
+		})
+		router.GET("/login", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "login.html", gin.H{"error": c.Query("error")})
+		})
+	}
 }
 
 func (g *GinAuth) register(c *gin.Context) {
@@ -69,10 +71,7 @@ func newRedirectHandler(redirectUrl string) *RedirectHandler {
 }
 
 func (n *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	u, err := token.GetUserInfo(r)
-	log.Println("User", u)
-	u, err = token.GetUserInfo(r)
-	log.Println("User", u)
+	_, err := token.GetUserInfo(r)
 	if err != nil {
 		http.Redirect(w, r, n.redirectUrl, http.StatusFound)
 	}
