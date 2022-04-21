@@ -58,6 +58,10 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	}
 }
 
+func (g *GinAuth) SetTokenSender(senderFunc TokenSenderFunc) {
+	g.auth.SetTokenSender(senderFunc)
+}
+
 func (g *GinAuth) register(c *gin.Context) {
 	g.auth.register(c.Writer, c.Request)
 }

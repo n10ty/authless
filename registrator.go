@@ -45,6 +45,16 @@ func (a *Auth) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if a.tokenSenderFunc == nil {
+		user.Enabled = true
+	} else {
+		if err := a.tokenSenderFunc(user.ConfirmationToken); err != nil {
+			log.Printf("Error during send confirmation token: %s\n", err.Error())
+			http.Redirect(w, r, "/register?error=Internal error", http.StatusMovedPermanently)
+			return
+		}
+	}
+
 	err = (*a.storage).CreateUser(user)
 	if err != nil {
 		log.Printf("internal error: %s", err)
