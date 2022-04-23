@@ -64,3 +64,9 @@ storage:
   dbname: test_auth
 ```
 
+## HTML templates
+
+There are ready to use html login/registration forms. To use it
+copy `template` folder to your project root.
+
+![Image](/login-form.png)
