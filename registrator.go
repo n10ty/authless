@@ -32,7 +32,7 @@ func (a *Auth) register(email, password string) error {
 	if a.tokenSenderFunc == nil {
 		user.Enabled = true
 	} else {
-		if err := a.tokenSenderFunc(user.ConfirmationToken); err != nil {
+		if err := a.tokenSenderFunc(user.Email, user.ConfirmationToken); err != nil {
 			log.Printf("Error during send confirmation token: %s\n", err.Error())
 			return errors.New("Internal error")
 		}

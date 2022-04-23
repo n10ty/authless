@@ -97,7 +97,7 @@ func newAuthService(config *Config, storage *storage.Storage) *authService.Servi
 	return a
 }
 
-type TokenSenderFunc = func(string) error
+type TokenSenderFunc = func(email, token string) error
 
 func (a *Auth) SetTokenSender(senderFunc TokenSenderFunc) {
 	a.tokenSenderFunc = senderFunc
