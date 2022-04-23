@@ -50,7 +50,7 @@ func EncryptPassword(plainPassword string) (string, error) {
 }
 
 func GenerateConfirmationToken() string {
-	length := 10
+	length := 64
 	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, length)
 	rand.Read(b)

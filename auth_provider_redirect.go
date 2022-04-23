@@ -51,7 +51,7 @@ func (m RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if !ok {
-		http.Redirect(w, r, "/login?error=Incorrect user or password", http.StatusFound)
+		http.Redirect(w, r, "/login?error=Incorrect email or password", http.StatusFound)
 		return
 	}
 

@@ -19,6 +19,8 @@ type Storage interface {
 	AuthenticateUser(email, password string) (bool, error)
 	CreateUser(user *User) error
 	GetUser(email string) (*User, error)
+	GetUserByToken(token string) (*User, error)
+	UpdateUser(user *User) error
 }
 
 type Config struct {

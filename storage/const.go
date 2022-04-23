@@ -1,6 +1,9 @@
 package storage
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 type Const struct {
 	creds map[string]string
@@ -23,15 +26,22 @@ func (f *Const) AuthenticateUser(email, password string) (bool, error) {
 	return false, nil
 }
 
-func (f *Const) CreateUser(user *User) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (f *Const) GetUser(email string) (*User, error) {
 	if _, exists := f.creds[email]; !exists {
 		return &User{}, ErrUserNotFound
 	}
 
 	return NewUser(email, f.creds[email])
+}
+
+func (f *Const) GetUserByToken(token string) (*User, error) {
+	return nil, fmt.Errorf("not suppoerted")
+}
+
+func (f *Const) CreateUser(user *User) error {
+	panic("can't create user")
+}
+
+func (f *Const) UpdateUser(user *User) error {
+	panic("Can't update user")
 }

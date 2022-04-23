@@ -55,7 +55,7 @@ func (m ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ok {
-		rest.SendErrorJSON(w, r, m.L, http.StatusForbidden, nil, "incorrect user or password")
+		rest.SendErrorJSON(w, r, m.L, http.StatusForbidden, nil, "incorrect email or password")
 		return
 	}
 
