@@ -34,7 +34,9 @@ func main() {
 		c.String(200, "pong")
 	})
 
-	router.Handle("GET", "/private", auth.AuthRequired(private))
+	router.Handle("GET", "/private", auth.AuthRequired(func(c *gin.Context) {
+		c.String(200, "private")
+	}))
 
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)
