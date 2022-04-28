@@ -16,7 +16,6 @@ func readConfig(path string) (*Config, error) {
 	if err != nil {             // Handle errors reading the config file
 		return cfg, fmt.Errorf("Fatal error config file: %w \n", err)
 	}
-
 	err = viper.Unmarshal(&cfg)
 	if err != nil {
 		return cfg, fmt.Errorf("Fatal to read config file: %w \n", err)
@@ -37,8 +36,9 @@ func (cfg *Config) toLibCfg() authService.Opts {
 		SameSiteCookie: http.SameSiteStrictMode,
 		TokenDuration:  cfg.TokenDuration,
 		CookieDuration: cfg.CookieDuration,
-		Issuer:         cfg.AppName,
+		Issuer:         cfg.Host,
 		URL:            "/",
+		SendJWTHeader:  true,
 		AvatarStore:    avatar.NewNoOp(),
 		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
 			// allow only dev_* names

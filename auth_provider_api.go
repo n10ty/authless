@@ -1,68 +1,65 @@
 package authless
 
 import (
-	"crypto/rand"
 	"crypto/sha1"
 	"encoding/json"
-	"fmt"
 	"mime"
 	"net/http"
 
-	"github.com/go-pkgz/auth/logger"
 	"github.com/go-pkgz/auth/provider"
 	"github.com/go-pkgz/auth/token"
-	"github.com/go-pkgz/rest"
 	"github.com/golang-jwt/jwt"
+	"github.com/n10ty/authless/storage"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
-const (
-	// MaxHTTPBodySize defines max http body size
-	MaxHTTPBodySize = 1024 * 1024
-)
+// MaxHTTPBodySize defines max http body size
+const MaxHTTPBodySize = 1024 * 1024
+
+// credentials holds user credentials
+type credentials struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
 // ApiAuthHandler aims to handle unauthorized requests and errors as json
 type ApiAuthHandler struct {
-	logger.L
-	CredChecker        provider.CredChecker
-	ProviderName       string
-	TokenService       provider.TokenService
-	Issuer             string
-	AvatarSaver        provider.AvatarSaver
-	UserIDFunc         provider.UserIDFunc
-	SuccessRedirectUrl string
+	host               string
+	successRedirectUrl string
+	credChecker        provider.CredChecker
+	jwtService         *token.Service
+	storage            storage.Storage
 }
 
-func (m ApiAuthHandler) Name() string {
-	return "r"
+func NewApiAuthHandler(host string, successRedirectUrl string, credChecker provider.CredChecker, jwtService *token.Service, storage storage.Storage) *ApiAuthHandler {
+	return &ApiAuthHandler{host: host, successRedirectUrl: successRedirectUrl, credChecker: credChecker, jwtService: jwtService, storage: storage}
 }
 
-func (m ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	creds, err := m.getCredentials(w, r)
+func (a *ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	creds, err := a.getCredentials(w, r)
+
 	if err != nil {
-		rest.SendErrorJSON(w, r, m.L, http.StatusBadRequest, err, "failed to parse credentials")
+		renderJSONWithStatus(w, JSON{"error": "failed to parse credentials"}, http.StatusBadRequest)
 		return
 	}
 	sessOnly := r.URL.Query().Get("sess") == "1"
-	if m.CredChecker == nil {
-		rest.SendErrorJSON(w, r, m.L, http.StatusInternalServerError,
-			errors.New("no credential checker"), "no credential checker")
+	if a.credChecker == nil {
+		renderJSONWithStatus(w, JSON{"error": "no credential checker"}, http.StatusInternalServerError)
 		return
 	}
-	ok, err := m.CredChecker.Check(creds.Email, creds.Password)
+	ok, err := a.credChecker.Check(creds.Email, creds.Password)
+	log.Debugf("LOGIN check: %v", ok)
 	if err != nil {
-		rest.SendErrorJSON(w, r, m.L, http.StatusInternalServerError, err, "failed to check user credentials")
+		renderJSONWithStatus(w, JSON{"error": "failed to check user credentials"}, http.StatusInternalServerError)
 		return
 	}
 	if !ok {
-		rest.SendErrorJSON(w, r, m.L, http.StatusForbidden, nil, "incorrect email or password")
+		renderJSONWithStatus(w, JSON{"error": "incorrect email or password"}, http.StatusForbidden)
 		return
 	}
 
-	userID := m.ProviderName + "_" + token.HashID(sha1.New(), creds.Email)
-	if m.UserIDFunc != nil {
-		userID = m.ProviderName + "_" + token.HashID(sha1.New(), m.UserIDFunc(creds.Email, r))
-	}
+	userID := a.host + "_" + token.HashID(sha1.New(), creds.Email)
 
 	u := token.User{
 		Name: creds.Email,
@@ -71,55 +68,129 @@ func (m ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	cid, err := randToken()
 	if err != nil {
-		rest.SendErrorJSON(w, r, m.L, http.StatusInternalServerError, err, "can't make token id")
+		renderJSONWithStatus(w, JSON{"error": "can't make token id"}, http.StatusInternalServerError)
 		return
 	}
 
 	claims := token.Claims{
 		User: &u,
 		StandardClaims: jwt.StandardClaims{
-			Id:       cid,
-			Issuer:   m.Issuer,
-			Audience: creds.Audience,
+			Id:     cid,
+			Issuer: a.host,
 		},
 		SessionOnly: sessOnly,
 	}
 
-	if _, err = m.TokenService.Set(w, claims); err != nil {
-		rest.SendErrorJSON(w, r, m.L, http.StatusInternalServerError, err, "failed to set token")
+	if _, err = a.jwtService.Set(w, claims); err != nil {
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
 		return
 	}
 
-	if m.SuccessRedirectUrl == "" {
-		m.SuccessRedirectUrl = "/"
+	if a.successRedirectUrl == "" {
+		a.successRedirectUrl = "/"
 	}
-	rest.RenderJSON(w, claims.User)
+
+	tkn, err := a.jwtService.Token(claims)
+	if err != nil {
+		log.Printf("internal error: %s\n", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+
+	renderJSONWithStatus(w, JSON{"user": claims.User, "jwt": tkn}, http.StatusOK)
 }
 
-func (m ApiAuthHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
-}
-
-func (m ApiAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	m.TokenService.Reset(w)
+func (a *ApiAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	a.jwtService.Reset(w)
 	http.Redirect(w, r, "/", 301)
 }
 
-// credentials holds user credentials
-type credentials struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Audience string `json:"aud"`
+func (a *ApiAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Redirect(w, r, "/activate-result?error=Bad request", http.StatusFound)
+		return
+	}
+
+	user, err := a.storage.GetUserByToken(token)
+	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
+		log.Printf("internal error: %s", err)
+		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		return
+	} else if errors.Is(err, storage.ErrUserNotFound) {
+		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
+		return
+	}
+
+	if user.ConfirmationToken != token {
+		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
+		return
+	}
+
+	user.Enabled = true
+	if err := a.storage.UpdateUser(user); err != nil {
+		log.Printf("internal error: %s", err)
+		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, "/activate-result", http.StatusFound)
+}
+
+func (a *ApiAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	if email == "" {
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
+	password := r.FormValue("password")
+	if password == "" {
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
+
+	if !passwordValid(password) {
+		renderJSONWithStatus(w, JSON{"error": "password must be contains at least 6 symbols"}, http.StatusBadRequest)
+		return
+	}
+
+	if !emailValid(email) {
+		renderJSONWithStatus(w, JSON{"error": "invalid email"}, http.StatusBadRequest)
+		return
+	}
+
+	_, err := a.storage.GetUser(email)
+	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
+		log.Printf("internal error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "email already exists"}, http.StatusBadRequest)
+		return
+	}
+
+	user, err := storage.NewUser(email, password)
+	if err != nil {
+		log.Printf("internal error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+
+	err = a.storage.CreateUser(user)
+	if err != nil {
+		log.Printf("internal error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // getCredentials extracts user and password from request
-func (m ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
+func (a *ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
 
 	// GET /something?user=name&passwd=xyz&aud=bar
 	if r.Method == "GET" {
 		return credentials{
 			Email:    r.URL.Query().Get("email"),
 			Password: r.URL.Query().Get("password"),
-			Audience: r.URL.Query().Get("aud"),
 		}, nil
 	}
 
@@ -156,18 +227,5 @@ func (m ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (
 	return credentials{
 		Email:    r.Form.Get("email"),
 		Password: r.Form.Get("password"),
-		Audience: r.Form.Get("aud"),
 	}, nil
-}
-
-func randToken() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", errors.Wrap(err, "can't get random")
-	}
-	s := sha1.New()
-	if _, err := s.Write(b); err != nil {
-		return "", errors.Wrap(err, "can't write randoms to sha1")
-	}
-	return fmt.Sprintf("%x", s.Sum(nil)), nil
 }

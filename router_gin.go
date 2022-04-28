@@ -3,7 +3,6 @@ package authless
 import (
 	"net/http"
 
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-pkgz/auth/token"
 )
@@ -22,15 +21,14 @@ func NewGinAuth(configPath string) (*GinAuth, error) {
 }
 
 func (g *GinAuth) AuthRequired(handler func(c *gin.Context)) func(c *gin.Context) {
-	m := g.auth.auth.Middleware()
 	if g.auth.config.Type == AuthTypeRedirect {
 		return func(context *gin.Context) {
-			m.Trace(newRedirectHandler("/login")).ServeHTTP(context.Writer, context.Request)
+			g.auth.doAuth(false)(newRedirectHandler("/login")).ServeHTTP(context.Writer, context.Request)
 			handler(context)
 		}
 	} else {
 		return func(context *gin.Context) {
-			m.Auth(&NoBody{}).ServeHTTP(context.Writer, context.Request)
+			g.auth.doAuth(true)(&NoBody{}).ServeHTTP(context.Writer, context.Request)
 			if context.Writer.Status() == http.StatusUnauthorized {
 				return
 			}
@@ -40,62 +38,38 @@ func (g *GinAuth) AuthRequired(handler func(c *gin.Context)) func(c *gin.Context
 }
 
 func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
-	authRoutes, _ := g.auth.auth.Handlers()
 	router.LoadHTMLGlob("template/*")
-	router.Any("/auth/*auth", gin.WrapH(authRoutes))
-	router.GET("/success", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "success.html", nil)
-	})
-	router.POST("/register", g.register)
+	router.Any("/auth/login", gin.WrapF(g.auth.authHandler.LoginHandler))
+	router.GET("/auth/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
+	router.POST("/auth/register", gin.WrapF(g.auth.authHandler.RegistrationHandler))
+	router.GET("/auth/activate", gin.WrapF(g.auth.authHandler.ActivationHandler))
 
-	router.GET("/register", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "register.html", gin.H{"error": c.Query("error")})
+	router.GET("/success", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "registration_success.html", nil)
 	})
+
 	router.GET("/login", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "login.html", gin.H{"error": c.Query("error")})
+		c.HTML(http.StatusOK, "login_form.html", gin.H{"error": c.Query("error")})
 	})
-	router.GET("/activate", g.activateWithRedirect)
+	router.GET("/logout", func(c *gin.Context) {
+		c.Redirect(http.StatusTemporaryRedirect, "/auth/logout")
+	})
+	router.GET("/register", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "registration_form.html", gin.H{"error": c.Query("error")})
+	})
 	router.GET("/activate-result", func(c *gin.Context) {
 		err := c.Query("error")
 		if err != "" {
-			c.HTML(http.StatusOK, "activate-error.html", gin.H{"error": c.Query("error")})
+			c.HTML(http.StatusOK, "activation_error.html", gin.H{"error": c.Query("error")})
 			return
 		}
-		c.HTML(http.StatusOK, "activate-success.html", nil)
+		c.HTML(http.StatusOK, "activation_success.html", nil)
 		return
 	})
 }
 
 func (g *GinAuth) SetTokenSender(senderFunc TokenSenderFunc) {
-	g.auth.SetTokenSender(senderFunc)
-}
-
-func (g *GinAuth) register(c *gin.Context) {
-	email, ok := c.GetPostForm("email")
-	if email == "" || !ok {
-		c.Redirect(http.StatusMovedPermanently, "/register?error=Bad request")
-	}
-	password, ok := c.GetPostForm("password")
-	if password == "" || !ok {
-		c.Redirect(http.StatusMovedPermanently, "/register?error=Bad request")
-	}
-
-	err := g.auth.register(email, password)
-	if err != nil {
-		c.Redirect(http.StatusMovedPermanently, fmt.Sprintf("/register?error=%s", err))
-	}
-
-	c.Redirect(http.StatusFound, "/success")
-}
-
-func (g *GinAuth) activateWithRedirect(c *gin.Context) {
-	token := c.Query("token")
-
-	err := g.auth.activate(token)
-	if err != nil {
-		c.Redirect(http.StatusMovedPermanently, fmt.Sprintf("/activate-result?error=%s", err))
-	}
-	c.Redirect(http.StatusMovedPermanently, "/activate-result")
+	g.auth.SetActivationTokenSender(senderFunc)
 }
 
 type RedirectHandler struct {

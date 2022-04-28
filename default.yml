@@ -1,9 +1,10 @@
-appName: myapp
+host: myapp.cpm
 secret: mysecret
 disablexsrf: false
-type: redirect
+type: api
 storage:
-  type: mysql
+  type: inmemory
+  FileStoragePath: ./db.txt
   host: localhost
   port: 3306
   username: root

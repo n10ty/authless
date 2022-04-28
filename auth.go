@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"time"
 
-	authService "github.com/go-pkgz/auth"
 	"github.com/go-pkgz/auth/provider"
 	"github.com/go-pkgz/auth/token"
 	"github.com/n10ty/authless/storage"
@@ -16,10 +15,12 @@ const AuthTypeRedirect = "redirect"
 const AuthTypeAPI = "api"
 
 type Auth struct {
-	storage         *storage.Storage
+	storage         storage.Storage
 	config          *Config
-	auth            *authService.Service
 	tokenSenderFunc TokenSenderFunc
+	authHandler     AuthHandler
+	jwtService      *token.Service
+	//credChecker     provider.CredChecker
 }
 
 func initAuth(configPath string) error {
@@ -32,31 +33,17 @@ func initAuth(configPath string) error {
 		return err
 	}
 
-	auth := newAuthService(config, &storage)
-	a = &Auth{
-		config:  config,
-		storage: &storage,
-		auth:    auth,
-	}
+	a = newAuth(config, storage)
+
 	return nil
 }
 
-type Config struct {
-	AppName        string
-	Secret         string
-	DisableXSRF    bool
-	TokenDuration  time.Duration
-	CookieDuration time.Duration
-	Storage        storage.Config
-	Type           string // redirect or api
-}
+func newAuth(config *Config, storage storage.Storage) *Auth {
 
-func newAuthService(config *Config, storage *storage.Storage) *authService.Service {
 	opts := config.toLibCfg()
-	a := authService.NewService(opts)
 
 	credChecker := provider.CredCheckerFunc(func(user, password string) (ok bool, err error) {
-		return (*storage).AuthenticateUser(user, password)
+		return storage.AuthenticateUser(user, password)
 	})
 
 	jwtService := token.NewService(token.Opts{
@@ -74,31 +61,45 @@ func newAuthService(config *Config, storage *storage.Storage) *authService.Servi
 		XSRFHeaderKey:   opts.XSRFHeaderKey,
 		SendJWTHeader:   opts.SendJWTHeader,
 		JWTQuery:        opts.JWTQuery,
-		Issuer:          config.AppName,
+		Issuer:          config.Host,
 		AudienceReader:  opts.AudienceReader,
 		AudSecrets:      opts.AudSecrets,
 		SameSite:        opts.SameSiteCookie,
 	})
 
-	var handler provider.Provider
+	var authHandler AuthHandler
+
 	if config.Type == AuthTypeRedirect {
-		handler = RedirectAuthHandler{
-			CredChecker:  credChecker,
-			TokenService: jwtService,
-		}
+		authHandler = NewRedirectAuthHandler(config.Host, config.SuccessRedirectUrl, credChecker, jwtService, storage)
 	} else {
-		handler = ApiAuthHandler{
-			CredChecker:  credChecker,
-			TokenService: jwtService,
-		}
+		authHandler = NewApiAuthHandler(config.Host, config.SuccessRedirectUrl, credChecker, jwtService, storage)
 	}
-	a.AddCustomHandler(handler)
+
+	a = &Auth{
+		config:      config,
+		storage:     storage,
+		authHandler: authHandler,
+		jwtService:  jwtService,
+	}
 
 	return a
 }
 
+type Config struct {
+	Host               string
+	Secret             string
+	DisableXSRF        bool
+	TokenDuration      time.Duration
+	CookieDuration     time.Duration
+	Storage            storage.Config
+	Type               string // redirect or api
+	TemplatePath       string
+	Validator          token.Validator
+	SuccessRedirectUrl string
+}
+
 type TokenSenderFunc = func(email, token string) error
 
-func (a *Auth) SetTokenSender(senderFunc TokenSenderFunc) {
+func (a *Auth) SetActivationTokenSender(senderFunc TokenSenderFunc) {
 	a.tokenSenderFunc = senderFunc
 }

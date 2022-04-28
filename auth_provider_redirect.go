@@ -7,30 +7,73 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/go-pkgz/auth/logger"
 	"github.com/go-pkgz/auth/provider"
 	"github.com/go-pkgz/auth/token"
 	"github.com/golang-jwt/jwt"
+	"github.com/n10ty/authless/storage"
 	"github.com/pkg/errors"
 )
 
 type RedirectAuthHandler struct {
-	logger.L
-	CredChecker        provider.CredChecker
-	ProviderName       string
-	TokenService       provider.TokenService
-	Issuer             string
-	AvatarSaver        provider.AvatarSaver
-	UserIDFunc         provider.UserIDFunc
-	SuccessRedirectUrl string
+	host               string
+	successRedirectUrl string
+	credChecker        provider.CredChecker
+	jwtService         provider.TokenService
+	storage            storage.Storage
 }
 
-func (m RedirectAuthHandler) Name() string {
-	return "r"
+func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker provider.CredChecker, jwtService provider.TokenService, storage storage.Storage) *RedirectAuthHandler {
+	return &RedirectAuthHandler{host: host, successRedirectUrl: successRedirectUrl, credChecker: credChecker, jwtService: jwtService, storage: storage}
 }
 
-func (m RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	creds, err := m.getCredentials(w, r)
+func (a *RedirectAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	if email == "" {
+		http.Redirect(w, r, "/register?error=Bad request", http.StatusMovedPermanently)
+		return
+	}
+	password := r.FormValue("password")
+	if password == "" {
+		http.Redirect(w, r, "/register?error=Bad request", http.StatusMovedPermanently)
+		return
+	}
+
+	if !passwordValid(password) {
+		http.Redirect(w, r, "/register?error=Password must be contains at least 6 symbols", http.StatusMovedPermanently)
+		return
+	}
+
+	if !emailValid(email) {
+		http.Redirect(w, r, "/register?error=Invalid email", http.StatusMovedPermanently)
+		return
+	}
+
+	_, err := a.storage.GetUser(email)
+	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
+		log.Printf("internal error: %s", err)
+		http.Redirect(w, r, "/register?error=Email already exists", http.StatusMovedPermanently)
+		return
+	}
+
+	user, err := storage.NewUser(email, password)
+	if err != nil {
+		log.Printf("internal error: %s", err)
+		http.Redirect(w, r, "/register?error=Internal error", http.StatusMovedPermanently)
+		return
+	}
+
+	err = a.storage.CreateUser(user)
+	if err != nil {
+		log.Printf("internal error: %s", err)
+		http.Redirect(w, r, "/register?error=Internal error", http.StatusMovedPermanently)
+		return
+	}
+
+	http.Redirect(w, r, "/success", http.StatusFound)
+}
+
+func (a *RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	creds, err := a.getCredentials(w, r)
 	if err != nil {
 		log.Println("failed to parse credentials")
 		http.Redirect(w, r, "/login?error=Bad request", http.StatusFound)
@@ -38,13 +81,13 @@ func (m RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	sessOnly := r.URL.Query().Get("sess") == "1"
-	if m.CredChecker == nil {
+	if a.credChecker == nil {
 		log.Println("no credential checker")
 		http.Redirect(w, r, "/login?error=Internal error", http.StatusFound)
 		return
 	}
 
-	ok, err := m.CredChecker.Check(creds.Email, creds.Password)
+	ok, err := a.credChecker.Check(creds.Email, creds.Password)
 	if err != nil {
 		log.Println("failed to check user credentials")
 		http.Redirect(w, r, "/login?error=Internal error", http.StatusFound)
@@ -55,10 +98,7 @@ func (m RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userID := m.ProviderName + "_" + token.HashID(sha1.New(), creds.Email)
-	if m.UserIDFunc != nil {
-		userID = m.ProviderName + "_" + token.HashID(sha1.New(), m.UserIDFunc(creds.Email, r))
-	}
+	userID := AuthTypeRedirect + "_" + token.HashID(sha1.New(), creds.Email)
 
 	u := token.User{
 		Name: creds.Email,
@@ -75,42 +115,69 @@ func (m RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request
 	claims := token.Claims{
 		User: &u,
 		StandardClaims: jwt.StandardClaims{
-			Id:       cid,
-			Issuer:   m.Issuer,
-			Audience: creds.Audience,
+			Id:     cid,
+			Issuer: a.host,
 		},
 		SessionOnly: sessOnly,
 	}
 
-	if _, err = m.TokenService.Set(w, claims); err != nil {
+	if _, err = a.jwtService.Set(w, claims); err != nil {
 		log.Println("failed to set token")
 		http.Redirect(w, r, "/login?error=Internal error", http.StatusFound)
 		return
 	}
 
-	if m.SuccessRedirectUrl == "" {
-		m.SuccessRedirectUrl = "/"
+	if a.successRedirectUrl == "" {
+		a.successRedirectUrl = "/"
 	}
-	http.Redirect(w, r, m.SuccessRedirectUrl, 301)
+	http.Redirect(w, r, a.successRedirectUrl, 301)
 }
 
-func (m RedirectAuthHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
-}
-
-func (m RedirectAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	m.TokenService.Reset(w)
+func (a *RedirectAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	a.jwtService.Reset(w)
 	http.Redirect(w, r, "/", 301)
 }
 
+func (a *RedirectAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Redirect(w, r, "/activate-result?error=Bad request", http.StatusFound)
+		return
+	}
+
+	user, err := a.storage.GetUserByToken(token)
+	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
+		log.Printf("internal error: %s", err)
+		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		return
+	} else if errors.Is(err, storage.ErrUserNotFound) {
+		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
+		return
+	}
+
+	if user.ConfirmationToken != token {
+		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
+		return
+	}
+
+	user.Enabled = true
+	if err := a.storage.UpdateUser(user); err != nil {
+		log.Printf("internal error: %s", err)
+		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, "/activate-result", http.StatusFound)
+}
+
 // getCredentials extracts user and password from request
-func (m RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
+func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
 
 	// GET /something?user=name&passwd=xyz&aud=bar
 	if r.Method == "GET" {
 		return credentials{
 			Email:    r.URL.Query().Get("email"),
 			Password: r.URL.Query().Get("password"),
-			Audience: r.URL.Query().Get("aud"),
 		}, nil
 	}
 
@@ -147,6 +214,5 @@ func (m RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Reque
 	return credentials{
 		Email:    r.Form.Get("email"),
 		Password: r.Form.Get("password"),
-		Audience: r.Form.Get("aud"),
 	}, nil
 }

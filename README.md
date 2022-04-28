@@ -38,9 +38,6 @@ func main() {
 		c.String(200, "private")
 	}))
 
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
-	})
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")
 	})
@@ -70,3 +67,21 @@ There are ready to use html login/registration forms. To use it
 copy `template` folder to your project root.
 
 ![Image](/login-form.png)
+
+## Routes
+
+### /auth/r/login
+Call GET ```/auth/r/login?email=test@example.com&passwd=xyz```
+Or send POST request
+```json
+{
+    "email": "test@example.com",
+    "password": "xyz"
+}
+```
+
+Todo:
+
+- [ ] Remind password
+- [ ] Get rid of /r/
+- [ ] Add global auth.GetUser method

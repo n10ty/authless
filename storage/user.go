@@ -29,7 +29,7 @@ func NewUser(email string, plainPassword string) (*User, error) {
 
 	return &User{
 		Email:             email,
-		Enabled:           true,
+		Enabled:           false,
 		plainPassword:     plainPassword,
 		Password:          password,
 		ConfirmationToken: GenerateConfirmationToken(),

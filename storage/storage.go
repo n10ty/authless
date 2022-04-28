@@ -11,6 +11,7 @@ const (
 	storageTypePostgres = "postgres"
 	storageTypeCloud    = "cloud"
 	storageTypeConst    = "const"
+	storageTypeInMemory = "inmemory"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -24,13 +25,14 @@ type Storage interface {
 }
 
 type Config struct {
-	Type     storageType
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Dbname   string
-	Users    map[string]string
+	Type            storageType
+	FileStoragePath string
+	Host            string
+	Port            int
+	Username        string
+	Password        string
+	Dbname          string
+	Users           map[string]string
 }
 
 func NewStorage(config Config) (Storage, error) {
@@ -41,6 +43,8 @@ func NewStorage(config Config) (Storage, error) {
 	case storageTypeConst:
 		// todo read from config
 		return NewConst(config.Users)
+	case storageTypeInMemory:
+		return NewInMemory(config.FileStoragePath)
 	default:
 		return nil, errors.New("Unknown storage type: " + config.Type)
 	}
