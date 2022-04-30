@@ -5,11 +5,27 @@ import (
 	authService "github.com/go-pkgz/auth"
 	"github.com/go-pkgz/auth/avatar"
 	"github.com/go-pkgz/auth/token"
+	"github.com/n10ty/authless/storage"
 	"github.com/spf13/viper"
 	"net/http"
+	"time"
 )
 
-func readConfig(path string) (*Config, error) {
+type Config struct {
+	Host               string
+	Secret             string
+	DisableXSRF        bool
+	TokenDuration      time.Duration
+	CookieDuration     time.Duration
+	Storage            storage.Config
+	Type               string // redirect or api
+	TemplatePath       string
+	Validator          token.Validator
+	SuccessRedirectUrl string
+	LogLevel           string
+}
+
+func ReadConfig(path string) (*Config, error) {
 	var cfg *Config
 	viper.SetConfigFile(path)
 	err := viper.ReadInConfig() // Find and read the config file

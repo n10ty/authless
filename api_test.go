@@ -24,7 +24,7 @@ const db = "db.txt"
 var s storage.Storage
 var jwtTok string
 
-func teatUp() {
+func teatApiUp() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: false,
 		ForceColors:   true,
@@ -32,8 +32,20 @@ func teatUp() {
 	})
 	log.SetLevel(log.DebugLevel)
 
-	path := "./default.yml"
-	auth, err := authless.NewGinAuth(path)
+	config := &authless.Config{
+		Host:               "localhost",
+		Secret:             "d123",
+		DisableXSRF:        true,
+		TokenDuration:      time.Minute,
+		CookieDuration:     time.Minute,
+		Storage:            storage.Config{Type: storage.StorageTypeInMemory, FileStoragePath: db},
+		Type:               authless.AuthTypeAPI,
+		TemplatePath:       "",
+		Validator:          nil,
+		SuccessRedirectUrl: "",
+	}
+
+	auth, err := authless.NewGinAuth(config)
 	if err != nil {
 		log.Println(err)
 		return
@@ -69,8 +81,8 @@ func tearDown() {
 	os.Truncate(db, 0)
 }
 
-func Test(t *testing.T) {
-	go teatUp()
+func TestAPI(t *testing.T) {
+	go teatApiUp()
 	defer tearDown()
 	time.Sleep(1 * time.Second)
 
@@ -132,9 +144,7 @@ func Test(t *testing.T) {
 	})
 	t.Run("TestLoginSuccess", func(t *testing.T) {
 		resp, err := http.Get(fmt.Sprintf("%s/auth/login?email=%s&password=%s", URL, email, passw))
-		if err != nil {
-			assert.NoError(t, err)
-		}
+		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.NoError(t, err)
@@ -152,9 +162,7 @@ func Test(t *testing.T) {
 
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			assert.NoError(t, err)
-		}
+		assert.NoError(t, err)
 
 		assert.Equal(t, "private", string(body))
 	})

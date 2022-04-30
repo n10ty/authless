@@ -31,7 +31,6 @@ func NewInMemory(path string) (*InMemory, error) {
 
 	for scanner.Scan() {
 		t := scanner.Text()
-		fmt.Println(t)
 		err := json.Unmarshal([]byte(t), &u)
 		if err != nil {
 			return nil, fmt.Errorf("error reading file: %w", err)

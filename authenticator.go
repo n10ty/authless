@@ -1,9 +1,10 @@
 package authless
 
 import (
+	"errors"
+	"fmt"
 	"github.com/go-pkgz/auth/token"
-	"github.com/pkg/errors"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -22,7 +23,7 @@ func (a *Auth) doAuth(reqAuth bool) func(http.Handler) http.Handler {
 			h.ServeHTTP(w, r)
 			return
 		}
-		log.Printf("[DEBUG] auth failed, %v", err)
+		log.Debugf("Could not authorize: %s", err)
 		renderJsonError(w, "unauthorized", http.StatusUnauthorized)
 	}
 
@@ -31,7 +32,7 @@ func (a *Auth) doAuth(reqAuth bool) func(http.Handler) http.Handler {
 
 			claims, tkn, err := a.jwtService.Get(r)
 			if err != nil {
-				onError(h, w, r, errors.Wrap(err, "can't get token"))
+				onError(h, w, r, fmt.Errorf("can't get token: %w", err))
 				return
 			}
 
@@ -48,7 +49,7 @@ func (a *Auth) doAuth(reqAuth bool) func(http.Handler) http.Handler {
 			if claims.User != nil { // if uinfo in token populate it to context
 				// validator passed by client and performs check on token or/and claims
 				if a.config.Validator != nil && !a.config.Validator.Validate(tkn, claims) {
-					onError(h, w, r, errors.Errorf("user %s/%s blocked", claims.User.Name, claims.User.ID))
+					onError(h, w, r, fmt.Errorf("user %s/%s blocked", claims.User.Name, claims.User.ID))
 					a.jwtService.Reset(w)
 					return
 				}
@@ -56,7 +57,7 @@ func (a *Auth) doAuth(reqAuth bool) func(http.Handler) http.Handler {
 				if a.jwtService.IsExpired(claims) {
 					if claims, err = a.refreshExpiredToken(w, claims, tkn); err != nil {
 						a.jwtService.Reset(w)
-						onError(h, w, r, errors.Wrap(err, "can't refresh token"))
+						onError(h, w, r, fmt.Errorf("can't refresh token: %w", err))
 						return
 					}
 				}

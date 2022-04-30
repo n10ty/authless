@@ -1,6 +1,7 @@
 host: myapp.cpm
 secret: mysecret
 disablexsrf: false
+loglevel: debug
 type: api
 storage:
   type: inmemory

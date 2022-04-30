@@ -7,11 +7,11 @@ import (
 type storageType = string
 
 const (
-	storageTypeMysql    = "mysql"
-	storageTypePostgres = "postgres"
-	storageTypeCloud    = "cloud"
-	storageTypeConst    = "const"
-	storageTypeInMemory = "inmemory"
+	StorageTypeMysql    = "mysql"
+	StorageTypePostgres = "postgres"
+	StorageTypeCloud    = "cloud"
+	StorageTypeConst    = "const"
+	StorageTypeInMemory = "inmemory"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -38,12 +38,12 @@ type Config struct {
 func NewStorage(config Config) (Storage, error) {
 	//var storage *Storage
 	switch config.Type {
-	case storageTypeMysql:
+	case StorageTypeMysql:
 		return NewMysqlStorage(config)
-	case storageTypeConst:
+	case StorageTypeConst:
 		// todo read from config
 		return NewConst(config.Users)
-	case storageTypeInMemory:
+	case StorageTypeInMemory:
 		return NewInMemory(config.FileStoragePath)
 	default:
 		return nil, errors.New("Unknown storage type: " + config.Type)

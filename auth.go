@@ -2,11 +2,10 @@ package authless
 
 import (
 	_ "embed"
-	"time"
-
 	"github.com/go-pkgz/auth/provider"
 	"github.com/go-pkgz/auth/token"
 	"github.com/n10ty/authless/storage"
+	log "github.com/sirupsen/logrus"
 )
 
 var a *Auth
@@ -23,11 +22,14 @@ type Auth struct {
 	//credChecker     provider.CredChecker
 }
 
-func initAuth(configPath string) error {
-	config, err := readConfig(configPath)
+func initAuth(config *Config) error {
+	loglevel, err := log.ParseLevel(config.LogLevel)
 	if err != nil {
-		return err
+		log.Warnf("Unknown log level: %s. Set to INFO", loglevel)
+		loglevel = log.InfoLevel
 	}
+	log.SetLevel(loglevel)
+
 	storage, err := storage.NewStorage(config.Storage)
 	if err != nil {
 		return err
@@ -83,19 +85,6 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 	}
 
 	return a
-}
-
-type Config struct {
-	Host               string
-	Secret             string
-	DisableXSRF        bool
-	TokenDuration      time.Duration
-	CookieDuration     time.Duration
-	Storage            storage.Config
-	Type               string // redirect or api
-	TemplatePath       string
-	Validator          token.Validator
-	SuccessRedirectUrl string
 }
 
 type TokenSenderFunc = func(email, token string) error

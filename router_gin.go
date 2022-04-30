@@ -11,8 +11,8 @@ type GinAuth struct {
 	auth *Auth
 }
 
-func NewGinAuth(configPath string) (*GinAuth, error) {
-	err := initAuth(configPath)
+func NewGinAuth(config *Config) (*GinAuth, error) {
+	err := initAuth(config)
 	if err != nil {
 		return nil, err
 	}
