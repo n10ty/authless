@@ -7,22 +7,21 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/go-pkgz/auth/provider"
-	"github.com/go-pkgz/auth/token"
 	"github.com/golang-jwt/jwt"
 	"github.com/n10ty/authless/storage"
+	"github.com/n10ty/authless/token"
 	"github.com/pkg/errors"
 )
 
 type RedirectAuthHandler struct {
 	host               string
 	successRedirectUrl string
-	credChecker        provider.CredChecker
-	jwtService         provider.TokenService
+	credChecker        CredCheckerFunc
+	jwtService         *token.Service
 	storage            storage.Storage
 }
 
-func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker provider.CredChecker, jwtService provider.TokenService, storage storage.Storage) *RedirectAuthHandler {
+func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *RedirectAuthHandler {
 	return &RedirectAuthHandler{host: host, successRedirectUrl: successRedirectUrl, credChecker: credChecker, jwtService: jwtService, storage: storage}
 }
 

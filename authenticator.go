@@ -3,10 +3,18 @@ package authless
 import (
 	"errors"
 	"fmt"
-	"github.com/go-pkgz/auth/token"
+	"github.com/n10ty/authless/token"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 )
+
+// CredCheckerFunc type is an adapter to allow the use of ordinary functions as CredsChecker.
+type CredCheckerFunc func(user, password string) (ok bool, err error)
+
+// Check calls f(user,passwd)
+func (f CredCheckerFunc) Check(user, password string) (ok bool, err error) {
+	return f(user, password)
+}
 
 type AuthHandler interface {
 	LoginHandler(w http.ResponseWriter, r *http.Request)

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-pkgz/auth/token"
+	"github.com/n10ty/authless/token"
 )
 
 type GinAuth struct {

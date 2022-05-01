@@ -68,7 +68,7 @@ func teatApiUp() {
 	}))
 
 	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
+		c.String(200, "index")
 	})
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")

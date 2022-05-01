@@ -82,6 +82,13 @@ Or send POST request
 
 Todo:
 
+- [x] Add tests
+- [ ] Add default http router
 - [ ] Remind password
-- [ ] Get rid of /r/
+- [x] Get rid of /r/
 - [ ] Add global auth.GetUser method
+- [x] Fully get rid of authz package
+- [ ] Load default html template
+- [ ] Validate html present
+- [ ] Finish README
+- [ ] Blacklist of expired tokens

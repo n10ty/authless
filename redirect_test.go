@@ -67,7 +67,7 @@ func teatRedirectUp() {
 	}))
 
 	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
+		c.String(200, "public")
 	})
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")

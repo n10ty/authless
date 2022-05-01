@@ -2,10 +2,8 @@ package authless
 
 import (
 	"fmt"
-	authService "github.com/go-pkgz/auth"
-	"github.com/go-pkgz/auth/avatar"
-	"github.com/go-pkgz/auth/token"
 	"github.com/n10ty/authless/storage"
+	"github.com/n10ty/authless/token"
 	"github.com/spf13/viper"
 	"net/http"
 	"time"
@@ -20,7 +18,7 @@ type Config struct {
 	Storage            storage.Config
 	Type               string // redirect or api
 	TemplatePath       string
-	Validator          token.Validator
+	Validator          ValidatorFunc
 	SuccessRedirectUrl string
 	LogLevel           string
 }
@@ -40,10 +38,10 @@ func ReadConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func (cfg *Config) toLibCfg() authService.Opts {
+func (cfg *Config) toLibCfg() Opts {
 	//TODO add config validation
-	return authService.Opts{
-		SecretReader: token.SecretFunc(func(id string) (string, error) { // secret key for JWT
+	return Opts{
+		SecretReader: SecretFunc(func(id string) (string, error) { // secret key for JWT
 			return cfg.Secret, nil
 		}),
 		SecureCookies:  true,
@@ -55,8 +53,7 @@ func (cfg *Config) toLibCfg() authService.Opts {
 		Issuer:         cfg.Host,
 		URL:            "/",
 		SendJWTHeader:  true,
-		AvatarStore:    avatar.NewNoOp(),
-		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
+		Validator: ValidatorFunc(func(_ string, claims token.Claims) bool {
 			// allow only dev_* names
 			//return claims.Email != nil && strings.HasPrefix(claims.Email.Name, "dev_")
 			return true

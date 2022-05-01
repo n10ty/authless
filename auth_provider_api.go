@@ -6,10 +6,9 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/go-pkgz/auth/provider"
-	"github.com/go-pkgz/auth/token"
 	"github.com/golang-jwt/jwt"
 	"github.com/n10ty/authless/storage"
+	"github.com/n10ty/authless/token"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,12 +26,12 @@ type credentials struct {
 type ApiAuthHandler struct {
 	host               string
 	successRedirectUrl string
-	credChecker        provider.CredChecker
+	credChecker        CredCheckerFunc
 	jwtService         *token.Service
 	storage            storage.Storage
 }
 
-func NewApiAuthHandler(host string, successRedirectUrl string, credChecker provider.CredChecker, jwtService *token.Service, storage storage.Storage) *ApiAuthHandler {
+func NewApiAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *ApiAuthHandler {
 	return &ApiAuthHandler{host: host, successRedirectUrl: successRedirectUrl, credChecker: credChecker, jwtService: jwtService, storage: storage}
 }
 

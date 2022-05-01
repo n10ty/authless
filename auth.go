@@ -2,10 +2,11 @@ package authless
 
 import (
 	_ "embed"
-	"github.com/go-pkgz/auth/provider"
-	"github.com/go-pkgz/auth/token"
 	"github.com/n10ty/authless/storage"
+	"github.com/n10ty/authless/token"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"time"
 )
 
 var a *Auth
@@ -44,7 +45,7 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 
 	opts := config.toLibCfg()
 
-	credChecker := provider.CredCheckerFunc(func(user, password string) (ok bool, err error) {
+	credChecker := CredCheckerFunc(func(user, password string) (ok bool, err error) {
 		return storage.AuthenticateUser(user, password)
 	})
 
@@ -64,9 +65,9 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 		SendJWTHeader:   opts.SendJWTHeader,
 		JWTQuery:        opts.JWTQuery,
 		Issuer:          config.Host,
-		AudienceReader:  opts.AudienceReader,
-		AudSecrets:      opts.AudSecrets,
-		SameSite:        opts.SameSiteCookie,
+		//AudienceReader:  opts.AudienceReader,
+		AudSecrets: opts.AudSecrets,
+		SameSite:   opts.SameSiteCookie,
 	})
 
 	var authHandler AuthHandler
@@ -91,4 +92,35 @@ type TokenSenderFunc = func(email, token string) error
 
 func (a *Auth) SetActivationTokenSender(senderFunc TokenSenderFunc) {
 	a.tokenSenderFunc = senderFunc
+}
+
+// Opts is a full set of all parameters to initialize Service
+type Opts struct {
+	SecretReader   token.Secret        // reader returns secret for given site id (aud), required
+	ClaimsUpd      token.ClaimsUpdater // updater for jwt to add/modify values stored in the token
+	SecureCookies  bool                // makes jwt cookie secure
+	TokenDuration  time.Duration       // token's TTL, refreshed automatically
+	CookieDuration time.Duration       // cookie's TTL. This cookie stores JWT token
+
+	DisableXSRF bool // disable XSRF protection, useful for testing/debugging
+	DisableIAT  bool // disable IssuedAt claim
+
+	// optional (custom) names for cookies and headers
+	JWTCookieName   string        // default "JWT"
+	JWTCookieDomain string        // default empty
+	JWTHeaderKey    string        // default "X-JWT"
+	XSRFCookieName  string        // default "XSRF-TOKEN"
+	XSRFHeaderKey   string        // default "X-XSRF-TOKEN"
+	JWTQuery        string        // default "token"
+	SendJWTHeader   bool          // if enabled send JWT as a header instead of cookie
+	SameSiteCookie  http.SameSite // limit cross-origin requests with SameSite cookie attribute
+
+	Issuer string // optional value for iss claim, usually the application name, default "n10ty/authless"
+
+	URL       string          // root url for the rest service, i.e. http://blah.example.com, required
+	Validator token.Validator // validator allows to reject some valid tokens with user-defined logic
+
+	AudSecrets bool // allow multiple secrets (secret per aud)
+	//Logger           logger.L                 // logger interface, default is no logging at all
+	//RefreshCache     middleware.RefreshCache  // optional cache to keep refreshed tokens
 }
