@@ -18,7 +18,7 @@ type Config struct {
 	Storage            storage.Config
 	Type               string // redirect or api
 	TemplatePath       string
-	Validator          ValidatorFunc
+	Validator          token.ValidatorFunc
 	SuccessRedirectUrl string
 	LogLevel           string
 }
@@ -41,7 +41,7 @@ func ReadConfig(path string) (*Config, error) {
 func (cfg *Config) toLibCfg() Opts {
 	//TODO add config validation
 	return Opts{
-		SecretReader: SecretFunc(func(id string) (string, error) { // secret key for JWT
+		SecretReader: token.SecretFunc(func(id string) (string, error) { // secret key for JWT
 			return cfg.Secret, nil
 		}),
 		SecureCookies:  true,
@@ -53,7 +53,7 @@ func (cfg *Config) toLibCfg() Opts {
 		Issuer:         cfg.Host,
 		URL:            "/",
 		SendJWTHeader:  true,
-		Validator: ValidatorFunc(func(_ string, claims token.Claims) bool {
+		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
 			// allow only dev_* names
 			//return claims.Email != nil && strings.HasPrefix(claims.Email.Name, "dev_")
 			return true
