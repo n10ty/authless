@@ -23,7 +23,7 @@ type AuthHandler interface {
 	ActivationHandler(w http.ResponseWriter, r *http.Request)
 }
 
-// auth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)
+// doAuth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)
 func (a *Auth) doAuth(reqAuth bool) func(http.Handler) http.Handler {
 
 	onError := func(h http.Handler, w http.ResponseWriter, r *http.Request, err error) {

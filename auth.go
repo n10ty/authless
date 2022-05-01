@@ -30,6 +30,7 @@ func initAuth(config *Config) error {
 		loglevel = log.InfoLevel
 	}
 	log.SetLevel(loglevel)
+	log.Infof("Log level: %s", loglevel)
 
 	storage, err := storage.NewStorage(config.Storage)
 	if err != nil {

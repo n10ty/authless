@@ -39,6 +39,7 @@ func teatRedirectUp() {
 		CookieDuration:     time.Minute,
 		Storage:            storage.Config{Type: storage.StorageTypeInMemory, FileStoragePath: db},
 		Type:               authless.AuthTypeRedirect,
+		LogLevel:           "debug",
 		TemplatePath:       "",
 		Validator:          nil,
 		SuccessRedirectUrl: "",
@@ -139,14 +140,22 @@ func TestRedirect(t *testing.T) {
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/activate-result", url.String())
 	})
-	t.Run("TestLoginUserNotExists", func(t *testing.T) {
+	t.Run("TestLoginSuccess", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
 		resp, err := httpClient.Do(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 301, resp.StatusCode)
 		url, err := resp.Location()
-		jwtTok = resp.Header.Get("X-Jwt")
-		assert.True(t, len(jwtTok) > 65)
+
+		cookies := resp.Cookies()
+
+		for _, cookie := range cookies {
+			if cookie.Name == "JWT" {
+				jwtTok = cookie.Value
+				return
+			}
+		}
+		t.Error("Cookie not set")
 		assert.Equal(t, redirectURL+"/", url.String())
 	})
 	t.Run("TestAccessPrivateAuthorized", func(t *testing.T) {

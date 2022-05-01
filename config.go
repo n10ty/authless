@@ -15,6 +15,7 @@ type Config struct {
 	DisableXSRF        bool
 	TokenDuration      time.Duration
 	CookieDuration     time.Duration
+	SendJWTHeader      bool
 	Storage            storage.Config
 	Type               string // redirect or api
 	TemplatePath       string
@@ -52,7 +53,7 @@ func (cfg *Config) toLibCfg() Opts {
 		CookieDuration: cfg.CookieDuration,
 		Issuer:         cfg.Host,
 		URL:            "/",
-		SendJWTHeader:  true,
+		SendJWTHeader:  cfg.SendJWTHeader,
 		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
 			// allow only dev_* names
 			//return claims.Email != nil && strings.HasPrefix(claims.Email.Name, "dev_")
