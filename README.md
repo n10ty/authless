@@ -70,15 +70,44 @@ copy `template` folder to your project root.
 
 ## Routes
 
-### /auth/r/login
-Call GET ```/auth/r/login?email=test@example.com&passwd=xyz```
-Or send POST request
+### Login
+Call GET ```/auth/login?email=test@example.com&passwd=xyz```
+or send POST form
 ```json
 {
     "email": "test@example.com",
     "password": "xyz"
 }
 ```
+
+### Logout
+Call GET `/auth/logout` to remove cookie and blacklist token (see todo)
+
+### Register
+Send POST form ```/auth/register```
+```json
+{
+    "email": "test@example.com",
+    "password": "xyz"
+}
+```
+to create new user. Created user is not active and unable to login.
+
+#### Send activation token
+
+Use `TokenSenderFunc = func(email, token string) error` to send token during registration
+Example: 
+```go
+auth, _ := authless.NewGinAuth(configPath)
+client := NewMailerClient(somekey)
+auth.SetTokenSender(func(email, token string) error {
+    return client.SendEmail(email, token)
+})
+```
+
+### Activate
+Call GET ```/auth/activate?token=mytoken```
+to activate account to able account to login
 
 Todo:
 
@@ -91,4 +120,4 @@ Todo:
 - [ ] Load default html template
 - [ ] Validate html present
 - [ ] Finish README
-- [ ] Blacklist of expired tokens
+- [ ] Blacklist of expired tokens (after logout token invalid)
