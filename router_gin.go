@@ -23,12 +23,12 @@ func NewGinAuth(config *Config) (*GinAuth, error) {
 func (g *GinAuth) AuthRequired(handler func(c *gin.Context)) func(c *gin.Context) {
 	if g.auth.config.Type == AuthTypeRedirect {
 		return func(context *gin.Context) {
-			g.auth.doAuth(false)(newRedirectHandler("/login")).ServeHTTP(context.Writer, context.Request)
+			doAuth(false)(newRedirectHandler("/login")).ServeHTTP(context.Writer, context.Request)
 			handler(context)
 		}
 	} else {
 		return func(context *gin.Context) {
-			g.auth.doAuth(true)(&NoBody{}).ServeHTTP(context.Writer, context.Request)
+			doAuth(true)(&NoBody{}).ServeHTTP(context.Writer, context.Request)
 			if context.Writer.Status() == http.StatusUnauthorized {
 				return
 			}

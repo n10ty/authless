@@ -20,7 +20,6 @@ type Auth struct {
 	tokenSenderFunc TokenSenderFunc
 	authHandler     AuthHandler
 	jwtService      *token.Service
-	//credChecker     provider.CredChecker
 }
 
 func initAuth(config *Config) error {

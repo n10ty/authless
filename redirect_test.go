@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/n10ty/authless"
 	"github.com/n10ty/authless/storage"
+	"github.com/n10ty/authless/token"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -73,9 +74,15 @@ func teatRedirectUp() {
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")
 	})
-	stop := make(chan interface{})
+	router.GET("/user", auth.AuthRequired(func(c *gin.Context) {
+		user, err := token.GetUserInfo(c.Request)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusOK, user)
+	}))
 	log.Fatal(http.ListenAndServe(":8081", router))
-	<-stop
 }
 
 func tearRedirectDown() {
@@ -168,6 +175,20 @@ func TestRedirect(t *testing.T) {
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.NoError(t, err)
+		assert.Equal(t, "private", string(body))
+	})
+	t.Run("TestAccessPrivateUserStatus", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, redirectURL+"/user", nil)
+		req.Header.Set("X-Jwt", jwtTok)
+		c := http.DefaultClient
+		resp, err := c.Do(req)
+		assert.NoError(t, err)
+
+		log.Println(resp)
+		assert.Equal(t, 200, resp.StatusCode)
+		body, err := ioutil.ReadAll(resp.Body)
+		assert.NoError(t, err)
+
 		assert.Equal(t, "private", string(body))
 	})
 }

@@ -24,7 +24,7 @@ type AuthHandler interface {
 }
 
 // doAuth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)
-func (a *Auth) doAuth(reqAuth bool) func(http.Handler) http.Handler {
+func doAuth(reqAuth bool) func(http.Handler) http.Handler {
 
 	onError := func(h http.Handler, w http.ResponseWriter, r *http.Request, err error) {
 		if !reqAuth { // if no auth required allow to proceeded on error
