@@ -115,7 +115,7 @@ Todo:
 - [ ] Add default http router
 - [ ] Remind password
 - [x] Get rid of /r/
-- [ ] Add global auth.GetUser method
+- [x] Add global auth.GetUser method
 - [x] Fully get rid of authz package
 - [ ] Load default html template
 - [ ] Validate html present
