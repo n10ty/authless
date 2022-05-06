@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/n10ty/authless"
 	"github.com/n10ty/authless/storage"
+	"github.com/n10ty/authless/token"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -73,6 +74,14 @@ func teatApiUp() {
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")
 	})
+	router.GET("/user", auth.AuthRequired(func(c *gin.Context) {
+		user, err := token.GetUserInfo(c.Request)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusOK, user)
+	}))
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
@@ -149,9 +158,16 @@ func TestAPI(t *testing.T) {
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.NoError(t, err)
 
-		assert.True(t, strings.Contains(string(body), "jwt"))
-		assert.True(t, resp.Header.Get("X-Jwt") != "")
-		jwtTok = resp.Header.Get("X-Jwt")
+		assert.True(t, strings.Contains(string(body), "jwt"), "Response does not contains jwt token")
+		cookies := resp.Cookies()
+
+		for _, cookie := range cookies {
+			if cookie.Name == "JWT" {
+				jwtTok = cookie.Value
+				return
+			}
+		}
+		t.Error("Cookie not set")
 	})
 	t.Run("TestAccessPrivateAuthorized", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, URL+"/private", nil)
@@ -165,5 +181,18 @@ func TestAPI(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "private", string(body))
+	})
+	t.Run("TestAccessPrivateUserStatus", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, URL+"/user", nil)
+		req.Header.Set("X-Jwt", jwtTok)
+		c := http.DefaultClient
+		resp, err := c.Do(req)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 200, resp.StatusCode)
+		body, err := ioutil.ReadAll(resp.Body)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
 	})
 }

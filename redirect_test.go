@@ -184,11 +184,10 @@ func TestRedirect(t *testing.T) {
 		resp, err := c.Do(req)
 		assert.NoError(t, err)
 
-		log.Println(resp)
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.NoError(t, err)
 
-		assert.Equal(t, "private", string(body))
+		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
 	})
 }

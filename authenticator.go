@@ -24,60 +24,46 @@ type AuthHandler interface {
 }
 
 // doAuth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)
-func doAuth(reqAuth bool) func(http.Handler) http.Handler {
+func doAuth(w http.ResponseWriter, r *http.Request) {
+	onError := func(w http.ResponseWriter, r *http.Request, err error) {
+		log.Debugf("Could not authorize: %s", err)
+	}
 
-	onError := func(h http.Handler, w http.ResponseWriter, r *http.Request, err error) {
-		if !reqAuth { // if no auth required allow to proceeded on error
-			h.ServeHTTP(w, r)
+	claims, tkn, err := a.jwtService.Get(r)
+	if err != nil {
+		onError(w, r, fmt.Errorf("can't get token: %w", err))
+		return
+	}
+
+	if claims.Handshake != nil { // handshake in token indicate special use cases, not for login
+		onError(w, r, errors.New("invalid kind of token"))
+		return
+	}
+
+	if claims.User == nil {
+		onError(w, r, errors.New("no user info presented in the claim"))
+		return
+	}
+
+	if claims.User != nil { // if uinfo in token populate it to context
+		// validator passed by client and performs check on token or/and claims
+		if a.config.Validator != nil && !a.config.Validator.Validate(tkn, claims) {
+			onError(w, r, fmt.Errorf("user %s/%s blocked", claims.User.Name, claims.User.ID))
+			a.jwtService.Reset(w)
 			return
 		}
-		log.Debugf("Could not authorize: %s", err)
-		renderJsonError(w, "unauthorized", http.StatusUnauthorized)
-	}
 
-	f := func(h http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-
-			claims, tkn, err := a.jwtService.Get(r)
-			if err != nil {
-				onError(h, w, r, fmt.Errorf("can't get token: %w", err))
+		if a.jwtService.IsExpired(claims) {
+			if claims, err = a.refreshExpiredToken(w, claims, tkn); err != nil {
+				a.jwtService.Reset(w)
+				onError(w, r, fmt.Errorf("can't refresh token: %w", err))
 				return
 			}
-
-			if claims.Handshake != nil { // handshake in token indicate special use cases, not for login
-				onError(h, w, r, errors.New("invalid kind of token"))
-				return
-			}
-
-			if claims.User == nil {
-				onError(h, w, r, errors.New("no user info presented in the claim"))
-				return
-			}
-
-			if claims.User != nil { // if uinfo in token populate it to context
-				// validator passed by client and performs check on token or/and claims
-				if a.config.Validator != nil && !a.config.Validator.Validate(tkn, claims) {
-					onError(h, w, r, fmt.Errorf("user %s/%s blocked", claims.User.Name, claims.User.ID))
-					a.jwtService.Reset(w)
-					return
-				}
-
-				if a.jwtService.IsExpired(claims) {
-					if claims, err = a.refreshExpiredToken(w, claims, tkn); err != nil {
-						a.jwtService.Reset(w)
-						onError(h, w, r, fmt.Errorf("can't refresh token: %w", err))
-						return
-					}
-				}
-
-				r = token.SetUserInfo(r, *claims.User) // populate user info to request context
-			}
-
-			h.ServeHTTP(w, r)
 		}
-		return http.HandlerFunc(fn)
+
+		token.SetUserInfo(r, *claims.User) // populate user info to request context
+		fmt.Println(r.URL)
 	}
-	return f
 }
 
 // refreshExpiredToken makes a new token with passed claims
@@ -103,4 +89,15 @@ func (a *Auth) refreshExpiredToken(w http.ResponseWriter, claims token.Claims, t
 
 	log.Printf("[DEBUG] token refreshed for %+v", claims.User)
 	return c, nil
+}
+
+func newRedirectHandler(redirectUrl string) *RedirectHandler {
+	return &RedirectHandler{redirectUrl: redirectUrl}
+}
+
+func (n *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	_, err := token.GetUserInfo(r)
+	if err != nil {
+		http.Redirect(w, r, n.redirectUrl, http.StatusFound)
+	}
 }

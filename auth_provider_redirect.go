@@ -97,7 +97,7 @@ func (a *RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userID := AuthTypeRedirect + "_" + token.HashID(sha1.New(), creds.Email)
+	userID := token.HashID(sha1.New(), creds.Email)
 
 	u := token.User{
 		Name: creds.Email,

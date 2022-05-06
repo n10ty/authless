@@ -20,7 +20,6 @@ type User struct {
 	// set by service
 	Name     string `json:"name"`
 	ID       string `json:"id"`
-	Picture  string `json:"picture"`
 	Audience string `json:"aud,omitempty"`
 
 	// set by client
@@ -77,8 +76,9 @@ func GetUserInfo(r *http.Request) (user User, err error) {
 }
 
 // SetUserInfo sets user into request context
-func SetUserInfo(r *http.Request, user User) *http.Request {
+func SetUserInfo(r *http.Request, user User) {
 	ctx := r.Context()
 	ctx = context.WithValue(ctx, contextKey("user"), user)
-	return r.WithContext(ctx)
+
+	*r = *r.Clone(ctx)
 }

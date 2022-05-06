@@ -21,19 +21,18 @@ func NewGinAuth(config *Config) (*GinAuth, error) {
 }
 
 func (g *GinAuth) AuthRequired(handler func(c *gin.Context)) func(c *gin.Context) {
-	if g.auth.config.Type == AuthTypeRedirect {
-		return func(context *gin.Context) {
-			doAuth(false)(newRedirectHandler("/login")).ServeHTTP(context.Writer, context.Request)
-			handler(context)
-		}
-	} else {
-		return func(context *gin.Context) {
-			doAuth(true)(&NoBody{}).ServeHTTP(context.Writer, context.Request)
-			if context.Writer.Status() == http.StatusUnauthorized {
+	return func(context *gin.Context) {
+		doAuth(context.Writer, context.Request)
+		_, err := token.GetUserInfo(context.Request)
+		if err != nil {
+			if g.auth.config.Type == AuthTypeRedirect {
+				context.Redirect(http.StatusFound, "/login")
+			} else {
+				renderJsonError(context.Writer, "unauthorized", http.StatusUnauthorized)
 				return
 			}
-			handler(context)
 		}
+		handler(context)
 	}
 }
 
@@ -74,17 +73,6 @@ func (g *GinAuth) SetTokenSender(senderFunc TokenSenderFunc) {
 
 type RedirectHandler struct {
 	redirectUrl string
-}
-
-func newRedirectHandler(redirectUrl string) *RedirectHandler {
-	return &RedirectHandler{redirectUrl: redirectUrl}
-}
-
-func (n *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_, err := token.GetUserInfo(r)
-	if err != nil {
-		http.Redirect(w, r, n.redirectUrl, http.StatusFound)
-	}
 }
 
 type NoBody struct {
