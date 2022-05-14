@@ -112,7 +112,8 @@ to activate account to able account to login
 Todo:
 
 - [x] Add tests
-- [ ] Add default http router
+- [x] Add gorilla http router
+- [x] Add default http router
 - [ ] Remind password
 - [x] Get rid of /r/
 - [x] Add global auth.GetUser method
@@ -120,4 +121,5 @@ Todo:
 - [ ] Load default html template
 - [ ] Validate html present
 - [ ] Finish README
+- [ ] Add postgres
 - [ ] Blacklist of expired tokens (after logout token invalid)

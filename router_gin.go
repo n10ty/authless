@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/n10ty/authless/token"
 )
 
 type GinAuth struct {
@@ -22,15 +21,9 @@ func NewGinAuth(config *Config) (*GinAuth, error) {
 
 func (g *GinAuth) AuthRequired(handler func(c *gin.Context)) func(c *gin.Context) {
 	return func(context *gin.Context) {
-		doAuth(context.Writer, context.Request)
-		_, err := token.GetUserInfo(context.Request)
-		if err != nil {
-			if g.auth.config.Type == AuthTypeRedirect {
-				context.Redirect(http.StatusFound, "/login")
-			} else {
-				renderJsonError(context.Writer, "unauthorized", http.StatusUnauthorized)
-				return
-			}
+		doAuth(g.auth.config.Type == AuthTypeRedirect, context.Writer, context.Request)
+		if context.Writer.Status() == http.StatusUnauthorized {
+			return
 		}
 		handler(context)
 	}
@@ -50,9 +43,7 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	router.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login_form.html", gin.H{"error": c.Query("error")})
 	})
-	router.GET("/logout", func(c *gin.Context) {
-		c.Redirect(http.StatusTemporaryRedirect, "/auth/logout")
-	})
+	router.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
 	router.GET("/register", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "registration_form.html", gin.H{"error": c.Query("error")})
 	})
@@ -69,14 +60,4 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 
 func (g *GinAuth) SetTokenSender(senderFunc TokenSenderFunc) {
 	g.auth.SetActivationTokenSender(senderFunc)
-}
-
-type RedirectHandler struct {
-	redirectUrl string
-}
-
-type NoBody struct {
-}
-
-func (n *NoBody) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }

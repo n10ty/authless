@@ -24,8 +24,18 @@ type AuthHandler interface {
 }
 
 // doAuth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)
-func doAuth(w http.ResponseWriter, r *http.Request) {
+func doAuth(redirect bool, w http.ResponseWriter, r *http.Request) {
 	onError := func(w http.ResponseWriter, r *http.Request, err error) {
+		_, err = token.GetUserInfo(r)
+		if err != nil {
+			if redirect {
+				http.Redirect(w, r, "/login", http.StatusFound)
+			} else {
+				renderJsonError(w, "unauthorized", http.StatusUnauthorized)
+			}
+			return
+
+		}
 		log.Debugf("Could not authorize: %s", err)
 	}
 
@@ -89,15 +99,4 @@ func (a *Auth) refreshExpiredToken(w http.ResponseWriter, claims token.Claims, t
 
 	log.Printf("[DEBUG] token refreshed for %+v", claims.User)
 	return c, nil
-}
-
-func newRedirectHandler(redirectUrl string) *RedirectHandler {
-	return &RedirectHandler{redirectUrl: redirectUrl}
-}
-
-func (n *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_, err := token.GetUserInfo(r)
-	if err != nil {
-		http.Redirect(w, r, n.redirectUrl, http.StatusFound)
-	}
 }

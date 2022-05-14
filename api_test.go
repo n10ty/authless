@@ -113,6 +113,20 @@ func TestAPI(t *testing.T) {
 
 		assert.Equal(t, "{\"error\":\"incorrect email or password\"}\n", string(body))
 	})
+	t.Run("TestRegisterShortPasswordError", func(t *testing.T) {
+		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {email}, "password": {"1"}})
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+		body, err := ioutil.ReadAll(resp.Body)
+		assert.JSONEq(t, `{"error":"password must be contains at least 6 symbols"}`, string(body))
+	})
+	t.Run("TestInvalidEmailError", func(t *testing.T) {
+		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {"233"}, "password": {passw}})
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+		body, err := ioutil.ReadAll(resp.Body)
+		assert.JSONEq(t, `{"error":"invalid email"}`, string(body))
+	})
 	t.Run("TestRegisterSuccess", func(t *testing.T) {
 		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {email}, "password": {passw}})
 		assert.NoError(t, err)

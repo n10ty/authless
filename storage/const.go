@@ -35,7 +35,7 @@ func (f *Const) GetUser(email string) (*User, error) {
 }
 
 func (f *Const) GetUserByToken(token string) (*User, error) {
-	return nil, fmt.Errorf("not suppoerted")
+	return nil, fmt.Errorf("not supported")
 }
 
 func (f *Const) CreateUser(user *User) error {
