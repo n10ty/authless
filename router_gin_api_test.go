@@ -22,7 +22,7 @@ const email = "a@a.a"
 const passw = "1234567"
 const db = "db.txt"
 
-var s storage.Storage
+var ginRedirectAuth authless.GinAuth
 var jwtTok string
 
 func tearGinAPIUp() {
@@ -47,6 +47,7 @@ func tearGinAPIUp() {
 	}
 
 	auth, err := authless.NewGinAuth(config)
+	ginRedirectAuth = *auth
 	if err != nil {
 		log.Println(err)
 		return
@@ -54,20 +55,20 @@ func tearGinAPIUp() {
 
 	router := gin.Default()
 
-	auth.InitServiceRoutes(router)
+	ginRedirectAuth.InitServiceRoutes(router)
 
 	router.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
 	})
 
-	router.Handle("GET", "/private", auth.AuthRequired(func(c *gin.Context) {
+	router.Handle("GET", "/private", ginRedirectAuth.AuthRequired(func(c *gin.Context) {
 		c.String(200, "private")
 	}))
 
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")
 	})
-	router.GET("/user", auth.AuthRequired(func(c *gin.Context) {
+	router.GET("/user", ginRedirectAuth.AuthRequired(func(c *gin.Context) {
 		user, err := token.GetUserInfo(c.Request)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -129,6 +130,15 @@ func TestRouterGinAPI(t *testing.T) {
 			assert.NoError(t, err)
 			t.Error(string(body))
 		}
+	})
+	t.Run("TestRegisterActivateFuncExecuted", func(t *testing.T) {
+		exec := false
+		ginRedirectAuth.SetActivationTokenSender(func(email, token string) error {
+			exec = true
+			return nil
+		})
+		http.PostForm(URL+"/auth/register", url.Values{"email": {"v2@c.e"}, "password": {passw}})
+		assert.True(t, exec)
 	})
 	t.Run("TestAccessPrivateNotAuthorized", func(t *testing.T) {
 		resp, err := http.Get(URL + "/private")

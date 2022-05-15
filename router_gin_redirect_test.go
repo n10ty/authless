@@ -122,6 +122,15 @@ func TestRouterRedirectGin(t *testing.T) {
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/success", url.String())
 	})
+	t.Run("TestRegisterActivateFuncExecuted", func(t *testing.T) {
+		exec := false
+		ginRedirectAuth.SetActivationTokenSender(func(email, token string) error {
+			exec = true
+			return nil
+		})
+		http.PostForm(redirectURL+"/auth/register", url.Values{"email": {"v2@c.e"}, "password": {passw}})
+		assert.True(t, exec)
+	})
 	t.Run("TestLoginNotEnabledRedirectToLogin", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
 		resp, err := httpClient.Do(req)
