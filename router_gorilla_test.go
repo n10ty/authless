@@ -29,7 +29,7 @@ func teatRedirectGorillaUp() {
 		DisableXSRF:        true,
 		TokenDuration:      time.Minute,
 		CookieDuration:     time.Minute,
-		Storage:            storage.Config{Type: storage.StorageTypeInMemory, FileStoragePath: db},
+		Storage:            storage.Config{Type: storage.TypeInMemory, FileStoragePath: db},
 		Type:               authless.AuthTypeRedirect,
 		LogLevel:           "debug",
 		TemplatePath:       "",

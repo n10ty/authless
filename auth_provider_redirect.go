@@ -3,7 +3,6 @@ package authless
 import (
 	"crypto/sha1"
 	"encoding/json"
-	"log"
 	"mime"
 	"net/http"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/n10ty/authless/storage"
 	"github.com/n10ty/authless/token"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type RedirectAuthHandler struct {
@@ -19,6 +19,7 @@ type RedirectAuthHandler struct {
 	credChecker        CredCheckerFunc
 	jwtService         *token.Service
 	storage            storage.Storage
+	tokenSenderFunc    TokenSenderFunc
 }
 
 func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *RedirectAuthHandler {
@@ -66,6 +67,12 @@ func (a *RedirectAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http
 		log.Printf("internal error: %s", err)
 		http.Redirect(w, r, "/register?error=Internal error", http.StatusMovedPermanently)
 		return
+	}
+
+	if a.tokenSenderFunc != nil {
+		if err := a.tokenSenderFunc(email, user.ConfirmationToken); err != nil {
+			log.Errorf("error during send activation token: %s", err)
+		}
 	}
 
 	http.Redirect(w, r, "/success", http.StatusFound)
@@ -214,4 +221,8 @@ func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Requ
 		Email:    r.Form.Get("email"),
 		Password: r.Form.Get("password"),
 	}, nil
+}
+
+func (a *RedirectAuthHandler) SetActivationTokenSender(senderFunc TokenSenderFunc) {
+	a.tokenSenderFunc = senderFunc
 }

@@ -21,6 +21,7 @@ type AuthHandler interface {
 	LogoutHandler(w http.ResponseWriter, r *http.Request)
 	RegistrationHandler(w http.ResponseWriter, r *http.Request)
 	ActivationHandler(w http.ResponseWriter, r *http.Request)
+	SetActivationTokenSender(senderFunc TokenSenderFunc)
 }
 
 // doAuth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)

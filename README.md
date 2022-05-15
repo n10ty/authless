@@ -114,7 +114,7 @@ Todo:
 - [x] Add tests
 - [x] Add gorilla http router
 - [x] Add default http router
-- [ ] Remind password
+- [ ] Forget password
 - [x] Get rid of /r/
 - [x] Add global auth.GetUser method
 - [x] Fully get rid of authz package
@@ -122,4 +122,6 @@ Todo:
 - [ ] Validate html present
 - [ ] Finish README
 - [ ] Add postgres
+- [ ] Validate config
+- [ ] Pass full url to forget pass/validate acc functions
 - [ ] Blacklist of expired tokens (after logout token invalid)

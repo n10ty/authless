@@ -42,7 +42,6 @@ func initAuth(config *Config) error {
 }
 
 func newAuth(config *Config, storage storage.Storage) *Auth {
-
 	opts := config.toLibCfg()
 
 	credChecker := CredCheckerFunc(func(user, password string) (ok bool, err error) {
@@ -91,7 +90,7 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 type TokenSenderFunc = func(email, token string) error
 
 func (a *Auth) SetActivationTokenSender(senderFunc TokenSenderFunc) {
-	a.tokenSenderFunc = senderFunc
+	a.authHandler.SetActivationTokenSender(senderFunc)
 }
 
 // Opts is a full set of all parameters to initialize Service

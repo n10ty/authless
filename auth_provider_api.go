@@ -29,6 +29,7 @@ type ApiAuthHandler struct {
 	credChecker        CredCheckerFunc
 	jwtService         *token.Service
 	storage            storage.Storage
+	tokenSenderFunc    TokenSenderFunc
 }
 
 func NewApiAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *ApiAuthHandler {
@@ -179,6 +180,11 @@ func (a *ApiAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	if a.tokenSenderFunc != nil {
+		if err := a.tokenSenderFunc(email, user.ConfirmationToken); err != nil {
+			log.Errorf("error during send activation token: %s", err)
+		}
+	}
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -227,4 +233,8 @@ func (a *ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) 
 		Email:    r.Form.Get("email"),
 		Password: r.Form.Get("password"),
 	}, nil
+}
+
+func (a *ApiAuthHandler) SetActivationTokenSender(senderFunc TokenSenderFunc) {
+	a.tokenSenderFunc = senderFunc
 }
