@@ -58,6 +58,6 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	})
 }
 
-func (g *GinAuth) SetTokenSender(senderFunc TokenSenderFunc) {
-	g.auth.SetActivationTokenSender(senderFunc)
+func (g *GinAuth) SetActivationTokenSender(senderFunc TokenSenderFunc) {
+	g.auth.SetActivationTokenSenderFunc(senderFunc)
 }

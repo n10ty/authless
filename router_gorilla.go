@@ -91,5 +91,5 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 }
 
 func (g *GorillaAuth) SetTokenSender(senderFunc TokenSenderFunc) {
-	g.auth.SetActivationTokenSender(senderFunc)
+	g.auth.SetActivationTokenSenderFunc(senderFunc)
 }

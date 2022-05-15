@@ -12,20 +12,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
 
-const URL = "http://localhost:8080"
-const email = "a@a.a"
-const passw = "1234567"
-const db = "db.txt"
+const redirectURL = "http://localhost:8081"
 
-var s storage.Storage
-var jwtTok string
+var httpClient = &http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
 
-func teatApiUp() {
+func tearGinRedirectUp() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: false,
 		ForceColors:   true,
@@ -40,7 +39,8 @@ func teatApiUp() {
 		TokenDuration:      time.Minute,
 		CookieDuration:     time.Minute,
 		Storage:            storage.Config{Type: storage.TypeInMemory, FileStoragePath: db},
-		Type:               authless.AuthTypeAPI,
+		Type:               authless.AuthTypeRedirect,
+		LogLevel:           "debug",
 		TemplatePath:       "",
 		Validator:          nil,
 		SuccessRedirectUrl: "",
@@ -51,10 +51,6 @@ func teatApiUp() {
 		log.Println(err)
 		return
 	}
-	auth.SetTokenSender(func(email, token string) error {
-		fmt.Println("TOKEN SEND", token)
-		return nil
-	})
 
 	router := gin.Default()
 
@@ -69,7 +65,7 @@ func teatApiUp() {
 	}))
 
 	router.GET("/", func(c *gin.Context) {
-		c.String(200, "index")
+		c.String(200, "public")
 	})
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")
@@ -82,78 +78,57 @@ func teatApiUp() {
 		}
 		c.AbortWithStatusJSON(http.StatusOK, user)
 	}))
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":8081", router))
 }
 
-func tearDown() {
+func tearGinRedirectDown() {
 	log.Println("[DEBUG] Stop server")
 	os.Truncate(db, 0)
 }
 
-func TestAPI(t *testing.T) {
-	go teatApiUp()
-	defer tearDown()
+func TestRouterRedirectGin(t *testing.T) {
+	go tearGinRedirectUp()
+	defer tearGinRedirectDown()
 	time.Sleep(1 * time.Second)
 
-	t.Run("TestAccessPrivateNotAuthorized", func(t *testing.T) {
-		resp, err := http.Get(URL + "/private")
+	t.Run("TestAccessPrivateNotAuthorizedRedirectToLogin", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, redirectURL+"/private", nil)
+		resp, err := httpClient.Do(req)
 		assert.NoError(t, err)
-		assert.Equal(t, 401, resp.StatusCode)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "{\"error\":\"unauthorized\"}\n", string(body))
+		assert.Equal(t, 302, resp.StatusCode)
+		url, err := resp.Location()
+		assert.Equal(t, redirectURL+"/login", url.String())
 	})
 	t.Run("TestLoginUserNotExists", func(t *testing.T) {
-		resp, err := http.Get(fmt.Sprintf("%s/auth/login?email=%s&password=%s", URL, email, passw))
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
+		resp, err := httpClient.Do(req)
 		assert.NoError(t, err)
-		assert.Equal(t, 403, resp.StatusCode)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "{\"error\":\"incorrect email or password\"}\n", string(body))
+		assert.Equal(t, 302, resp.StatusCode)
+		url, err := resp.Location()
+		assert.Equal(t, redirectURL+"/login?error=Incorrect email or password", url.String())
 	})
-	t.Run("TestRegisterShortPasswordError", func(t *testing.T) {
-		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {email}, "password": {"1"}})
+	t.Run("TestLoginUserNotExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
+		resp, err := httpClient.Do(req)
 		assert.NoError(t, err)
-		assert.Equal(t, 400, resp.StatusCode)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.JSONEq(t, `{"error":"password must be contains at least 6 symbols"}`, string(body))
-	})
-	t.Run("TestInvalidEmailError", func(t *testing.T) {
-		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {"233"}, "password": {passw}})
-		assert.NoError(t, err)
-		assert.Equal(t, 400, resp.StatusCode)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.JSONEq(t, `{"error":"invalid email"}`, string(body))
+		assert.Equal(t, 302, resp.StatusCode)
+		url, err := resp.Location()
+		assert.Equal(t, redirectURL+"/login?error=Incorrect email or password", url.String())
 	})
 	t.Run("TestRegisterSuccess", func(t *testing.T) {
-		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {email}, "password": {passw}})
+		resp, err := httpClient.PostForm(redirectURL+"/auth/register", url.Values{"email": {email}, "password": {passw}})
 		assert.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-		if resp.StatusCode != 200 {
-			body, err := ioutil.ReadAll(resp.Body)
-			assert.NoError(t, err)
-			t.Error(string(body))
-		}
+		assert.Equal(t, 302, resp.StatusCode)
+		url, err := resp.Location()
+		assert.Equal(t, redirectURL+"/success", url.String())
 	})
-	t.Run("TestAccessPrivateNotAuthorized", func(t *testing.T) {
-		resp, err := http.Get(URL + "/private")
+	t.Run("TestLoginNotEnabledRedirectToLogin", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
+		resp, err := httpClient.Do(req)
 		assert.NoError(t, err)
-		assert.Equal(t, 401, resp.StatusCode)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "{\"error\":\"unauthorized\"}\n", string(body))
-	})
-	t.Run("TestLoginDisabled", func(t *testing.T) {
-		resp, err := http.Get(fmt.Sprintf("%s/auth/login?email=%s&password=%s", URL, email, passw))
-		assert.NoError(t, err)
-		assert.Equal(t, 403, resp.StatusCode)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "{\"error\":\"incorrect email or password\"}\n", string(body))
+		assert.Equal(t, 302, resp.StatusCode)
+		url, err := resp.Location()
+		assert.Equal(t, redirectURL+"/login?error=Incorrect email or password", url.String())
 	})
 	t.Run("TestActivateAccount", func(t *testing.T) {
 		s, err := storage.NewInMemory(db)
@@ -161,18 +136,20 @@ func TestAPI(t *testing.T) {
 		u, err := s.GetUser(email)
 		assert.NoError(t, err)
 
-		resp, err := http.Get(fmt.Sprintf("%s/auth/activate?token=%s", URL, u.ConfirmationToken))
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/activate?token=%s", redirectURL, u.ConfirmationToken), nil)
+		resp, err := httpClient.Do(req)
 		assert.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, 302, resp.StatusCode)
+		url, err := resp.Location()
+		assert.Equal(t, redirectURL+"/activate-result", url.String())
 	})
 	t.Run("TestLoginSuccess", func(t *testing.T) {
-		resp, err := http.Get(fmt.Sprintf("%s/auth/login?email=%s&password=%s", URL, email, passw))
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
+		resp, err := httpClient.Do(req)
 		assert.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		assert.Equal(t, 301, resp.StatusCode)
+		url, err := resp.Location()
 
-		assert.True(t, strings.Contains(string(body), "jwt"), "Response does not contains jwt token")
 		cookies := resp.Cookies()
 
 		for _, cookie := range cookies {
@@ -182,9 +159,10 @@ func TestAPI(t *testing.T) {
 			}
 		}
 		t.Error("Cookie not set")
+		assert.Equal(t, redirectURL+"/", url.String())
 	})
 	t.Run("TestAccessPrivateAuthorized", func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodGet, URL+"/private", nil)
+		req, _ := http.NewRequest(http.MethodGet, redirectURL+"/private", nil)
 		req.Header.Set("X-Jwt", jwtTok)
 		c := http.DefaultClient
 		resp, err := c.Do(req)
@@ -193,11 +171,10 @@ func TestAPI(t *testing.T) {
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.NoError(t, err)
-
 		assert.Equal(t, "private", string(body))
 	})
 	t.Run("TestAccessPrivateUserStatus", func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodGet, URL+"/user", nil)
+		req, _ := http.NewRequest(http.MethodGet, redirectURL+"/user", nil)
 		req.Header.Set("X-Jwt", jwtTok)
 		c := http.DefaultClient
 		resp, err := c.Do(req)

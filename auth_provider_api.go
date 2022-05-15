@@ -30,6 +30,7 @@ type ApiAuthHandler struct {
 	jwtService         *token.Service
 	storage            storage.Storage
 	tokenSenderFunc    TokenSenderFunc
+	remindPasswordFunc RemindPasswordFunc
 }
 
 func NewApiAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *ApiAuthHandler {
@@ -235,6 +236,15 @@ func (a *ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) 
 	}, nil
 }
 
-func (a *ApiAuthHandler) SetActivationTokenSender(senderFunc TokenSenderFunc) {
+func (a *ApiAuthHandler) RemindPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a *ApiAuthHandler) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
 	a.tokenSenderFunc = senderFunc
+}
+
+func (a *ApiAuthHandler) SetRemindPasswordFunc(remindPasswordFunc RemindPasswordFunc) {
+	a.remindPasswordFunc = remindPasswordFunc
 }

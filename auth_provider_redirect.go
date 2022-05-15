@@ -20,6 +20,7 @@ type RedirectAuthHandler struct {
 	jwtService         *token.Service
 	storage            storage.Storage
 	tokenSenderFunc    TokenSenderFunc
+	remindPasswordFunc RemindPasswordFunc
 }
 
 func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *RedirectAuthHandler {
@@ -223,6 +224,14 @@ func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Requ
 	}, nil
 }
 
-func (a *RedirectAuthHandler) SetActivationTokenSender(senderFunc TokenSenderFunc) {
+func (a *RedirectAuthHandler) RemindPasswordHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (a *RedirectAuthHandler) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
 	a.tokenSenderFunc = senderFunc
+}
+
+func (a *RedirectAuthHandler) SetRemindPasswordFunc(remindPasswordFunc RemindPasswordFunc) {
+	a.remindPasswordFunc = remindPasswordFunc
 }
