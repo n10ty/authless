@@ -67,9 +67,19 @@ func (s *MysqlStorage) GetUser(email string) (*User, error) {
 	return user, nil
 }
 
-func (s *MysqlStorage) GetUserByToken(token string) (*User, error) {
+func (s *MysqlStorage) GetUserByConfirmationToken(token string) (*User, error) {
 	user := &User{}
 	err := s.db.Get(user, "SELECT id, email, enabled, password, confirmation_token FROM users WHERE confirmation_token = ?", token)
+	if err != nil && errors.Is(err, sql.ErrNoRows) {
+		return user, ErrUserNotFound
+	}
+
+	return user, nil
+}
+
+func (s *MysqlStorage) GetUserByVerificationToken(token string) (*User, error) {
+	user := &User{}
+	err := s.db.Get(user, "SELECT id, email, enabled, password, verification_token FROM users WHERE verification_token = ?", token)
 	if err != nil && errors.Is(err, sql.ErrNoRows) {
 		return user, ErrUserNotFound
 	}

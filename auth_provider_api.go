@@ -15,6 +15,7 @@ import (
 
 // MaxHTTPBodySize defines max http body size
 const MaxHTTPBodySize = 1024 * 1024
+const TokenLength = 64
 
 // credentials holds user credentials
 type credentials struct {
@@ -67,16 +68,10 @@ func (a *ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		ID:   userID,
 	}
 
-	cid, err := randToken()
-	if err != nil {
-		renderJSONWithStatus(w, JSON{"error": "can't make token id"}, http.StatusInternalServerError)
-		return
-	}
-
 	claims := token.Claims{
 		User: &u,
 		StandardClaims: jwt.StandardClaims{
-			Id:     cid,
+			Id:     RandToken(TokenLength),
 			Issuer: a.host,
 		},
 		SessionOnly: sessOnly,
@@ -113,7 +108,7 @@ func (a *ApiAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user, err := a.storage.GetUserByToken(token)
+	user, err := a.storage.GetUserByConfirmationToken(token)
 	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
 		log.Printf("internal error: %s", err)
 		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
@@ -237,8 +232,37 @@ func (a *ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) 
 }
 
 func (a *ApiAuthHandler) RemindPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	//TODO implement me
-	panic("implement me")
+	email := r.FormValue("email")
+	if email == "" {
+		log.Info("remind password: empty email")
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
+
+	user, err := a.storage.GetUser(email)
+	if err != nil {
+		log.Printf("remind password: %s", err)
+		renderJSONWithStatus(w, nil, http.StatusOK)
+		return
+	}
+	if !user.Enabled {
+		renderJSONWithStatus(w, nil, http.StatusOK)
+		return
+	}
+
+	user.RegenerateChangePasswordToken()
+	if err := a.storage.UpdateUser(user); err != nil {
+		log.Printf("update user error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+	if err := a.remindPasswordFunc(email, user.ChangePasswordToken); err != nil {
+		log.Printf("remind password execution error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (a *ApiAuthHandler) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {

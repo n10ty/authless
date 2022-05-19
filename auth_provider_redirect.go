@@ -112,17 +112,10 @@ func (a *RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Reques
 		ID:   userID,
 	}
 
-	cid, err := randToken()
-	if err != nil {
-		log.Println("can't make token id")
-		http.Redirect(w, r, "/login?error=Internal error", http.StatusFound)
-		return
-	}
-
 	claims := token.Claims{
 		User: &u,
 		StandardClaims: jwt.StandardClaims{
-			Id:     cid,
+			Id:     RandToken(TokenLength),
 			Issuer: a.host,
 		},
 		SessionOnly: sessOnly,
@@ -152,7 +145,7 @@ func (a *RedirectAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	user, err := a.storage.GetUserByToken(token)
+	user, err := a.storage.GetUserByConfirmationToken(token)
 	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
 		log.Printf("internal error: %s", err)
 		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
@@ -225,7 +218,37 @@ func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Requ
 }
 
 func (a *RedirectAuthHandler) RemindPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	if email == "" {
+		log.Info("remind password: empty email")
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
 
+	user, err := a.storage.GetUser(email)
+	if err != nil {
+		log.Printf("remind password: %s", err)
+		renderJSONWithStatus(w, nil, http.StatusOK)
+		return
+	}
+	if !user.Enabled {
+		renderJSONWithStatus(w, nil, http.StatusOK)
+		return
+	}
+
+	user.RegenerateChangePasswordToken()
+	if err := a.storage.UpdateUser(user); err != nil {
+		log.Printf("update user error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+	if err := a.remindPasswordFunc(email, user.ChangePasswordToken); err != nil {
+		log.Printf("remind password execution error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (a *RedirectAuthHandler) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {

@@ -18,6 +18,8 @@ import (
 
 const redirectURL = "http://localhost:8081"
 
+var ginRedirectAuth authless.GinAuth
+
 var httpClient = &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
@@ -47,6 +49,7 @@ func tearGinRedirectUp() {
 	}
 
 	auth, err := authless.NewGinAuth(config)
+	ginRedirectAuth = *auth
 	if err != nil {
 		log.Println(err)
 		return
@@ -54,13 +57,13 @@ func tearGinRedirectUp() {
 
 	router := gin.Default()
 
-	auth.InitServiceRoutes(router)
+	ginRedirectAuth.InitServiceRoutes(router)
 
 	router.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
 	})
 
-	router.Handle("GET", "/private", auth.AuthRequired(func(c *gin.Context) {
+	router.Handle("GET", "/private", ginRedirectAuth.AuthRequired(func(c *gin.Context) {
 		c.String(200, "private")
 	}))
 
@@ -70,7 +73,7 @@ func tearGinRedirectUp() {
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")
 	})
-	router.GET("/user", auth.AuthRequired(func(c *gin.Context) {
+	router.GET("/user", ginRedirectAuth.AuthRequired(func(c *gin.Context) {
 		user, err := token.GetUserInfo(c.Request)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -97,6 +100,7 @@ func TestRouterRedirectGin(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
+		assert.NoError(t, err)
 		assert.Equal(t, redirectURL+"/login", url.String())
 	})
 	t.Run("TestLoginUserNotExists", func(t *testing.T) {
@@ -115,12 +119,34 @@ func TestRouterRedirectGin(t *testing.T) {
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/login?error=Incorrect email or password", url.String())
 	})
+	t.Run("TestRemindPasswordNotFoundUserNotExecuted", func(t *testing.T) {
+		exec := false
+		ginRedirectAuth.SetPasswordReminder(func(email, token string) error {
+			exec = true
+			return nil
+		})
+		resp, err := http.PostForm(redirectURL+"/auth/remind-password/request", url.Values{"email": {email}})
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.False(t, exec)
+	})
 	t.Run("TestRegisterSuccess", func(t *testing.T) {
 		resp, err := httpClient.PostForm(redirectURL+"/auth/register", url.Values{"email": {email}, "password": {passw}})
 		assert.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/success", url.String())
+	})
+	t.Run("TestRemindPasswordNotActiveUserNotExecuted", func(t *testing.T) {
+		exec := false
+		ginRedirectAuth.SetPasswordReminder(func(email, token string) error {
+			exec = true
+			return nil
+		})
+		resp, err := http.PostForm(redirectURL+"/auth/remind-password/request", url.Values{"email": {email}})
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.False(t, exec)
 	})
 	t.Run("TestRegisterActivateFuncExecuted", func(t *testing.T) {
 		exec := false
@@ -194,5 +220,17 @@ func TestRouterRedirectGin(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
+	})
+	t.Run("TestRemindPasswordExecuted", func(t *testing.T) {
+		exec := false
+		ginRedirectAuth.SetPasswordReminder(func(email, token string) error {
+			assert.Equal(t, "a@a.a", email)
+			exec = true
+			return nil
+		})
+		resp, err := http.PostForm(redirectURL+"/auth/remind-password/request", url.Values{"email": {email}})
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.True(t, exec)
 	})
 }

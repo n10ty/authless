@@ -2,23 +2,24 @@ package storage
 
 import (
 	"errors"
-	"fmt"
-	"math/rand"
 	"time"
 
+	"fmt"
 	"golang.org/x/crypto/bcrypt"
+	"math/rand"
 )
 
 const cost = bcrypt.DefaultCost
 
 type User struct {
-	Id                int64     `db:"id"`
-	Email             string    `db:"email"`
-	Enabled           bool      `db:"enabled"`
-	Password          string    `db:"password"`
-	LastLoginDate     time.Time `db:"last_login_date"`
-	ConfirmationToken string    `db:"confirmation_token"`
-	plainPassword     string
+	Id                  int64     `db:"id"`
+	Email               string    `db:"email"`
+	Enabled             bool      `db:"enabled"`
+	Password            string    `db:"password"`
+	LastLoginDate       time.Time `db:"last_login_date"`
+	ConfirmationToken   string    `db:"confirmation_token"`
+	ChangePasswordToken string    `db:"change_password_token"`
+	plainPassword       string
 }
 
 func NewUser(email string, plainPassword string) (*User, error) {
@@ -32,7 +33,7 @@ func NewUser(email string, plainPassword string) (*User, error) {
 		Enabled:           false,
 		plainPassword:     plainPassword,
 		Password:          password,
-		ConfirmationToken: GenerateConfirmationToken(),
+		ConfirmationToken: RandToken(64),
 	}, nil
 }
 
@@ -49,8 +50,11 @@ func EncryptPassword(plainPassword string) (string, error) {
 	return string(passwordBytes), nil
 }
 
-func GenerateConfirmationToken() string {
-	length := 64
+func (u *User) RegenerateChangePasswordToken() {
+	u.ChangePasswordToken = RandToken(64)
+}
+
+func RandToken(length int) string {
 	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, length)
 	rand.Read(b)

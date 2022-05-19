@@ -22,7 +22,7 @@ const email = "a@a.a"
 const passw = "1234567"
 const db = "db.txt"
 
-var ginRedirectAuth authless.GinAuth
+var ginAPIAuth authless.GinAuth
 var jwtTok string
 
 func tearGinAPIUp() {
@@ -47,7 +47,7 @@ func tearGinAPIUp() {
 	}
 
 	auth, err := authless.NewGinAuth(config)
-	ginRedirectAuth = *auth
+	ginAPIAuth = *auth
 	if err != nil {
 		log.Println(err)
 		return
@@ -55,20 +55,20 @@ func tearGinAPIUp() {
 
 	router := gin.Default()
 
-	ginRedirectAuth.InitServiceRoutes(router)
+	ginAPIAuth.InitServiceRoutes(router)
 
 	router.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
 	})
 
-	router.Handle("GET", "/private", ginRedirectAuth.AuthRequired(func(c *gin.Context) {
+	router.Handle("GET", "/private", ginAPIAuth.AuthRequired(func(c *gin.Context) {
 		c.String(200, "private")
 	}))
 
 	router.GET("/public", func(c *gin.Context) {
 		c.String(200, "public")
 	})
-	router.GET("/user", ginRedirectAuth.AuthRequired(func(c *gin.Context) {
+	router.GET("/user", ginAPIAuth.AuthRequired(func(c *gin.Context) {
 		user, err := token.GetUserInfo(c.Request)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -121,6 +121,17 @@ func TestRouterGinAPI(t *testing.T) {
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.JSONEq(t, `{"error":"invalid email"}`, string(body))
 	})
+	t.Run("TestRemindPasswordNotFoundUserNotExecuted", func(t *testing.T) {
+		exec := false
+		ginAPIAuth.SetPasswordReminder(func(email, token string) error {
+			exec = true
+			return nil
+		})
+		resp, err := http.PostForm(URL+"/auth/remind-password/request", url.Values{"email": {email}})
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.False(t, exec)
+	})
 	t.Run("TestRegisterSuccess", func(t *testing.T) {
 		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {email}, "password": {passw}})
 		assert.NoError(t, err)
@@ -131,9 +142,20 @@ func TestRouterGinAPI(t *testing.T) {
 			t.Error(string(body))
 		}
 	})
+	t.Run("TestRemindPasswordNotActiveUserNotExecuted", func(t *testing.T) {
+		exec := false
+		ginAPIAuth.SetPasswordReminder(func(email, token string) error {
+			exec = true
+			return nil
+		})
+		resp, err := http.PostForm(URL+"/auth/remind-password/request", url.Values{"email": {email}})
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.False(t, exec)
+	})
 	t.Run("TestRegisterActivateFuncExecuted", func(t *testing.T) {
 		exec := false
-		ginRedirectAuth.SetActivationTokenSender(func(email, token string) error {
+		ginAPIAuth.SetActivationTokenSender(func(email, token string) error {
 			exec = true
 			return nil
 		})
@@ -211,5 +233,17 @@ func TestRouterGinAPI(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
+	})
+	t.Run("TestRemindPasswordExecuted", func(t *testing.T) {
+		exec := false
+		ginAPIAuth.SetPasswordReminder(func(email, token string) error {
+			assert.Equal(t, "a@a.a", email)
+			exec = true
+			return nil
+		})
+		resp, err := http.PostForm(URL+"/auth/remind-password/request", url.Values{"email": {email}})
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.True(t, exec)
 	})
 }

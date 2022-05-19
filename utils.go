@@ -2,13 +2,12 @@ package authless
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
+	"math/rand"
 	"net/http"
 	"regexp"
+	"time"
 )
 
 func passwordValid(password string) bool {
@@ -21,19 +20,14 @@ func emailValid(email string) bool {
 	return r.Match([]byte(email))
 }
 
-func randToken() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", errors.Wrap(err, "can't get random")
-	}
-	s := sha1.New()
-	if _, err := s.Write(b); err != nil {
-		return "", errors.Wrap(err, "can't write randoms to sha1")
-	}
-	return fmt.Sprintf("%x", s.Sum(nil)), nil
+func RandToken(length int) string {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, length)
+	rand.Read(b)
+
+	return fmt.Sprintf("%x", b)[:length]
 }
 
-// JSON is a map alias, just for convenience
 type JSON map[string]interface{}
 
 // renderJSONWithStatus sends data as json and enforces status code

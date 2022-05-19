@@ -48,12 +48,12 @@ func main() {
 ## Config
 
 ```yaml
-appName: myapp.com
-secret: mysecret
+appName: myapp.com // your domain
+secret: mysecret // generate random secret
 disablexsrf: false
 type: redirect // 'redirect' or 'api'
 storage:
-  type: mysql
+  type: mysql  // mysql, const (setup by config), postgres
   host: localhost
   port: 3306
   username: root

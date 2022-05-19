@@ -31,10 +31,12 @@ func (g *GinAuth) AuthRequired(handler func(c *gin.Context)) func(c *gin.Context
 
 func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	router.LoadHTMLGlob("template/*")
-	router.Any("/auth/login", gin.WrapF(g.auth.authHandler.LoginHandler))
-	router.GET("/auth/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
-	router.POST("/auth/register", gin.WrapF(g.auth.authHandler.RegistrationHandler))
-	router.GET("/auth/activate", gin.WrapF(g.auth.authHandler.ActivationHandler))
+	auth := router.Group("/auth")
+	auth.Any("/login", gin.WrapF(g.auth.authHandler.LoginHandler))
+	auth.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
+	auth.POST("/register", gin.WrapF(g.auth.authHandler.RegistrationHandler))
+	auth.GET("/activate", gin.WrapF(g.auth.authHandler.ActivationHandler))
+	auth.POST("/remind-password/request", gin.WrapF(g.auth.authHandler.RemindPasswordHandler))
 
 	router.GET("/success", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "registration_success.html", nil)
@@ -60,4 +62,8 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 
 func (g *GinAuth) SetActivationTokenSender(senderFunc TokenSenderFunc) {
 	g.auth.SetActivationTokenSenderFunc(senderFunc)
+}
+
+func (g *GinAuth) SetPasswordReminder(remindPasswordFunc RemindPasswordFunc) {
+	g.auth.SetRemindPasswordFunc(remindPasswordFunc)
 }

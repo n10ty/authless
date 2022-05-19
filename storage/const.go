@@ -34,7 +34,7 @@ func (f *Const) GetUser(email string) (*User, error) {
 	return NewUser(email, f.creds[email])
 }
 
-func (f *Const) GetUserByToken(token string) (*User, error) {
+func (f *Const) GetUserByConfirmationToken(token string) (*User, error) {
 	return nil, fmt.Errorf("not supported")
 }
 

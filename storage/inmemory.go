@@ -65,7 +65,7 @@ func (m *InMemory) GetUser(email string) (*User, error) {
 	}
 }
 
-func (m *InMemory) GetUserByToken(token string) (*User, error) {
+func (m *InMemory) GetUserByConfirmationToken(token string) (*User, error) {
 	if user, exists := m.tokens[token]; !exists {
 		return &User{}, ErrUserNotFound
 	} else {
