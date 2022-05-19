@@ -36,7 +36,7 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	auth.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
 	auth.POST("/register", gin.WrapF(g.auth.authHandler.RegistrationHandler))
 	auth.GET("/activate", gin.WrapF(g.auth.authHandler.ActivationHandler))
-	auth.POST("/remind-password/request", gin.WrapF(g.auth.authHandler.RemindPasswordHandler))
+	auth.POST("/change-password/request", gin.WrapF(g.auth.authHandler.ChangePasswordRequestHandler))
 
 	router.GET("/success", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "registration_success.html", nil)
@@ -64,6 +64,6 @@ func (g *GinAuth) SetActivationTokenSender(senderFunc TokenSenderFunc) {
 	g.auth.SetActivationTokenSenderFunc(senderFunc)
 }
 
-func (g *GinAuth) SetPasswordReminder(remindPasswordFunc RemindPasswordFunc) {
-	g.auth.SetRemindPasswordFunc(remindPasswordFunc)
+func (g *GinAuth) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
+	g.auth.SetChangePasswordRequestFunc(f)
 }

@@ -4,7 +4,7 @@ CREATE TABLE `users` (
   `password` VARCHAR(256) NOT NULL,
   `enabled` TINYINT(1) NULL DEFAULT 0,
   `confirmation_token` VARCHAR(64) NULL,
-  `remind_password_token` VARCHAR(64) NULL,
+  `change_password_token` VARCHAR(64) NULL,
   `deleted` TINYINT(1) NULL DEFAULT 0,
   `last_login` DATETIME NULL,
   `registration_date` DATETIME NULL,

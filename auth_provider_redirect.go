@@ -14,13 +14,13 @@ import (
 )
 
 type RedirectAuthHandler struct {
-	host               string
-	successRedirectUrl string
-	credChecker        CredCheckerFunc
-	jwtService         *token.Service
-	storage            storage.Storage
-	tokenSenderFunc    TokenSenderFunc
-	remindPasswordFunc RemindPasswordFunc
+	host                      string
+	successRedirectUrl        string
+	credChecker               CredCheckerFunc
+	jwtService                *token.Service
+	storage                   storage.Storage
+	tokenSenderFunc           TokenSenderFunc
+	changePasswordRequestFunc ChangePasswordRequestFunc
 }
 
 func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *RedirectAuthHandler {
@@ -217,17 +217,17 @@ func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Requ
 	}, nil
 }
 
-func (a *RedirectAuthHandler) RemindPasswordHandler(w http.ResponseWriter, r *http.Request) {
+func (a *RedirectAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	if email == "" {
-		log.Info("remind password: empty email")
+		log.Info("change password: empty email")
 		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
 		return
 	}
 
 	user, err := a.storage.GetUser(email)
 	if err != nil {
-		log.Printf("remind password: %s", err)
+		log.Printf("change password: %s", err)
 		renderJSONWithStatus(w, nil, http.StatusOK)
 		return
 	}
@@ -242,8 +242,8 @@ func (a *RedirectAuthHandler) RemindPasswordHandler(w http.ResponseWriter, r *ht
 		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
 		return
 	}
-	if err := a.remindPasswordFunc(email, user.ChangePasswordToken); err != nil {
-		log.Printf("remind password execution error: %s", err)
+	if err := a.changePasswordRequestFunc(email, user.ChangePasswordToken); err != nil {
+		log.Printf("change password execution error: %s", err)
 		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
 		return
 	}
@@ -251,10 +251,10 @@ func (a *RedirectAuthHandler) RemindPasswordHandler(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *RedirectAuthHandler) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
-	a.tokenSenderFunc = senderFunc
+func (a *RedirectAuthHandler) SetActivationTokenSenderFunc(f TokenSenderFunc) {
+	a.tokenSenderFunc = f
 }
 
-func (a *RedirectAuthHandler) SetRemindPasswordFunc(remindPasswordFunc RemindPasswordFunc) {
-	a.remindPasswordFunc = remindPasswordFunc
+func (a *RedirectAuthHandler) ChangePasswordHandler(f ChangePasswordRequestFunc) {
+	a.changePasswordRequestFunc = f
 }

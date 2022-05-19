@@ -121,13 +121,13 @@ func TestRouterGinAPI(t *testing.T) {
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.JSONEq(t, `{"error":"invalid email"}`, string(body))
 	})
-	t.Run("TestRemindPasswordNotFoundUserNotExecuted", func(t *testing.T) {
+	t.Run("TestChangePasswordNotFoundUserNotExecuted", func(t *testing.T) {
 		exec := false
-		ginAPIAuth.SetPasswordReminder(func(email, token string) error {
+		ginAPIAuth.SetChangePasswordRequestFunc(func(email, token string) error {
 			exec = true
 			return nil
 		})
-		resp, err := http.PostForm(URL+"/auth/remind-password/request", url.Values{"email": {email}})
+		resp, err := http.PostForm(URL+"/auth/change-password/request", url.Values{"email": {email}})
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
@@ -142,13 +142,13 @@ func TestRouterGinAPI(t *testing.T) {
 			t.Error(string(body))
 		}
 	})
-	t.Run("TestRemindPasswordNotActiveUserNotExecuted", func(t *testing.T) {
+	t.Run("TestChangePasswordNotActiveUserNotExecuted", func(t *testing.T) {
 		exec := false
-		ginAPIAuth.SetPasswordReminder(func(email, token string) error {
+		ginAPIAuth.SetChangePasswordRequestFunc(func(email, token string) error {
 			exec = true
 			return nil
 		})
-		resp, err := http.PostForm(URL+"/auth/remind-password/request", url.Values{"email": {email}})
+		resp, err := http.PostForm(URL+"/auth/change-password/request", url.Values{"email": {email}})
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
@@ -234,14 +234,14 @@ func TestRouterGinAPI(t *testing.T) {
 
 		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
 	})
-	t.Run("TestRemindPasswordExecuted", func(t *testing.T) {
+	t.Run("TestChangePasswordExecuted", func(t *testing.T) {
 		exec := false
-		ginAPIAuth.SetPasswordReminder(func(email, token string) error {
+		ginAPIAuth.SetChangePasswordRequestFunc(func(email, token string) error {
 			assert.Equal(t, "a@a.a", email)
 			exec = true
 			return nil
 		})
-		resp, err := http.PostForm(URL+"/auth/remind-password/request", url.Values{"email": {email}})
+		resp, err := http.PostForm(URL+"/auth/change-password/request", url.Values{"email": {email}})
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.True(t, exec)

@@ -88,14 +88,14 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 }
 
 type TokenSenderFunc = func(email, token string) error
-type RemindPasswordFunc = func(email, token string) error
+type ChangePasswordRequestFunc = func(email, token string) error
 
 func (a *Auth) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
 	a.authHandler.SetActivationTokenSenderFunc(senderFunc)
 }
 
-func (a *Auth) SetRemindPasswordFunc(remindPasswordFunc RemindPasswordFunc) {
-	a.authHandler.SetRemindPasswordFunc(remindPasswordFunc)
+func (a *Auth) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
+	a.authHandler.ChangePasswordHandler(f)
 }
 
 // Opts is a full set of all parameters to initialize Service

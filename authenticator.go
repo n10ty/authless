@@ -17,13 +17,13 @@ func (f CredCheckerFunc) Check(user, password string) (ok bool, err error) {
 }
 
 type AuthHandler interface {
-	LoginHandler(w http.ResponseWriter, r *http.Request)
-	LogoutHandler(w http.ResponseWriter, r *http.Request)
-	RegistrationHandler(w http.ResponseWriter, r *http.Request)
-	ActivationHandler(w http.ResponseWriter, r *http.Request)
-	SetActivationTokenSenderFunc(senderFunc TokenSenderFunc)
-	RemindPasswordHandler(w http.ResponseWriter, r *http.Request)
-	SetRemindPasswordFunc(remindPasswordFunc RemindPasswordFunc)
+	LoginHandler(http.ResponseWriter, *http.Request)
+	LogoutHandler(http.ResponseWriter, *http.Request)
+	RegistrationHandler(http.ResponseWriter, *http.Request)
+	ActivationHandler(http.ResponseWriter, *http.Request)
+	SetActivationTokenSenderFunc(TokenSenderFunc)
+	ChangePasswordRequestHandler(http.ResponseWriter, *http.Request)
+	ChangePasswordHandler(ChangePasswordRequestFunc)
 }
 
 // doAuth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)
