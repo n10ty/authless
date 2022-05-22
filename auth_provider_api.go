@@ -104,33 +104,28 @@ func (a *ApiAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 func (a *ApiAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		http.Redirect(w, r, "/activate-result?error=Bad request", http.StatusFound)
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
 		return
 	}
 
 	user, err := a.storage.GetUserByConfirmationToken(token)
 	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
 		log.Printf("internal error: %s", err)
-		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
 		return
 	} else if errors.Is(err, storage.ErrUserNotFound) {
-		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
-		return
-	}
-
-	if user.ConfirmationToken != token {
-		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
 		return
 	}
 
 	user.Enabled = true
 	if err := a.storage.UpdateUser(user); err != nil {
 		log.Printf("internal error: %s", err)
-		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, "/activate-result", http.StatusFound)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (a *ApiAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
@@ -184,7 +179,79 @@ func (a *ApiAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 }
 
-// getCredentials extracts user and password from request
+func (a *ApiAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	if email == "" {
+		log.Info("change password: empty email")
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
+
+	user, err := a.storage.GetUser(email)
+	if err != nil {
+		log.Printf("change password: %s", err)
+		renderJSONWithStatus(w, nil, http.StatusOK)
+		return
+	}
+	if !user.Enabled {
+		renderJSONWithStatus(w, nil, http.StatusOK)
+		return
+	}
+
+	user.RegenerateChangePasswordToken()
+	if err := a.storage.UpdateUser(user); err != nil {
+		log.Printf("update user error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+	if err := a.changePasswordRequestFunc(email, user.ChangePasswordToken); err != nil {
+		log.Printf("change password execution error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *ApiAuthHandler) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.FormValue("token")
+	password := r.FormValue("password")
+	if token == "" || password == "" {
+		log.Info("change request: empty password or token")
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
+
+	user, err := a.storage.GetUserByChangePasswordToken(token)
+	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
+		log.Errorf("internal error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	} else if errors.Is(err, storage.ErrUserNotFound) {
+		log.Info("change request: user not found")
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
+
+	if user.ChangePasswordToken == "" || user.ChangePasswordToken != token {
+		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		return
+	}
+
+	if err = user.UpdatePassword(password); err != nil {
+		log.Errorf("internal error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+	}
+
+	if err := a.storage.UpdateUser(user); err != nil {
+		log.Errorf("internal error: %s", err)
+		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (a *ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
 
 	// GET /something?user=name&passwd=xyz&aud=bar
@@ -231,44 +298,10 @@ func (a *ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) 
 	}, nil
 }
 
-func (a *ApiAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
-	email := r.FormValue("email")
-	if email == "" {
-		log.Info("change password: empty email")
-		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
-		return
-	}
-
-	user, err := a.storage.GetUser(email)
-	if err != nil {
-		log.Printf("change password: %s", err)
-		renderJSONWithStatus(w, nil, http.StatusOK)
-		return
-	}
-	if !user.Enabled {
-		renderJSONWithStatus(w, nil, http.StatusOK)
-		return
-	}
-
-	user.RegenerateChangePasswordToken()
-	if err := a.storage.UpdateUser(user); err != nil {
-		log.Printf("update user error: %s", err)
-		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
-		return
-	}
-	if err := a.changePasswordRequestFunc(email, user.ChangePasswordToken); err != nil {
-		log.Printf("change password execution error: %s", err)
-		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
 func (a *ApiAuthHandler) SetActivationTokenSenderFunc(f TokenSenderFunc) {
 	a.tokenSenderFunc = f
 }
 
-func (a *ApiAuthHandler) ChangePasswordHandler(f ChangePasswordRequestFunc) {
+func (a *ApiAuthHandler) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
 	a.changePasswordRequestFunc = f
 }

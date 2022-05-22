@@ -21,6 +21,7 @@ type Storage interface {
 	CreateUser(user *User) error
 	GetUser(email string) (*User, error)
 	GetUserByConfirmationToken(token string) (*User, error)
+	GetUserByChangePasswordToken(token string) (*User, error)
 	UpdateUser(user *User) error
 }
 

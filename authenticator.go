@@ -23,7 +23,8 @@ type AuthHandler interface {
 	ActivationHandler(http.ResponseWriter, *http.Request)
 	SetActivationTokenSenderFunc(TokenSenderFunc)
 	ChangePasswordRequestHandler(http.ResponseWriter, *http.Request)
-	ChangePasswordHandler(ChangePasswordRequestFunc)
+	SetChangePasswordRequestFunc(ChangePasswordRequestFunc)
+	ChangePasswordHandler(http.ResponseWriter, *http.Request)
 }
 
 // doAuth implements all logic for authentication (reqAuth=true) and tracing (reqAuth=false)

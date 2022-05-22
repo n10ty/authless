@@ -38,6 +38,10 @@ func (f *Const) GetUserByConfirmationToken(token string) (*User, error) {
 	return nil, fmt.Errorf("not supported")
 }
 
+func (f *Const) GetUserByChangePasswordToken(token string) (*User, error) {
+	return nil, fmt.Errorf("not supported")
+}
+
 func (f *Const) CreateUser(user *User) error {
 	panic("can't create user")
 }

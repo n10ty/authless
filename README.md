@@ -125,3 +125,4 @@ Todo:
 - [ ] Validate config
 - [ ] Pass full url to forget pass/validate acc functions
 - [ ] Blacklist of expired tokens (after logout token invalid)
+- [ ] Get rid of error message in query ?error=bad request

@@ -37,30 +37,54 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	auth.POST("/register", gin.WrapF(g.auth.authHandler.RegistrationHandler))
 	auth.GET("/activate", gin.WrapF(g.auth.authHandler.ActivationHandler))
 	auth.POST("/change-password/request", gin.WrapF(g.auth.authHandler.ChangePasswordRequestHandler))
+	auth.POST("/change-password", gin.WrapF(g.auth.authHandler.ChangePasswordHandler))
 
-	router.GET("/success", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "registration_success.html", nil)
-	})
-
-	router.GET("/login", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "login_form.html", gin.H{"error": c.Query("error")})
-	})
-	router.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
-	router.GET("/register", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "registration_form.html", gin.H{"error": c.Query("error")})
-	})
-	router.GET("/activate-result", func(c *gin.Context) {
-		err := c.Query("error")
-		if err != "" {
-			c.HTML(http.StatusOK, "activation_error.html", gin.H{"error": c.Query("error")})
+	if g.auth.config.Type == AuthTypeRedirect {
+		router.GET("/success", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "registration_success.html", nil)
+		})
+		router.GET("/login", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "login_form.html", gin.H{"error": c.Query("error")})
+		})
+		router.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
+		router.GET("/register", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "registration_form.html", gin.H{"error": c.Query("error")})
+		})
+		router.GET("/activate/result", func(c *gin.Context) {
+			err := c.Query("error")
+			params := gin.H{}
+			if err != "" {
+				params["error"] = c.Query("error")
+			} else {
+				params["success"] = "Activated successfully"
+			}
+			c.HTML(http.StatusOK, "activation_result.html", params)
 			return
-		}
-		c.HTML(http.StatusOK, "activation_success.html", nil)
-		return
-	})
+		})
+		router.GET("/forget-password", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "forget_password_form.html", gin.H{"error": c.Query("error")})
+		})
+		router.GET("/forget-password-success", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "forget_password_success.html", nil)
+		})
+		router.GET("/change-password", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "change_password_form.html", gin.H{"token": c.Query("token")})
+		})
+		router.GET("/change-password/result", func(c *gin.Context) {
+			err := c.Query("error")
+			params := gin.H{}
+			if err != "" {
+				params["error"] = c.Query("error")
+			} else {
+				params["success"] = "Password has been changed successfully"
+			}
+			c.HTML(http.StatusOK, "change_password_result.html", params)
+			return
+		})
+	}
 }
 
-func (g *GinAuth) SetActivationTokenSender(senderFunc TokenSenderFunc) {
+func (g *GinAuth) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
 	g.auth.SetActivationTokenSenderFunc(senderFunc)
 }
 

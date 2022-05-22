@@ -10,6 +10,7 @@ import (
 )
 
 const cost = bcrypt.DefaultCost
+const TokenLength = 64
 
 type User struct {
 	Id                  int64     `db:"id"`
@@ -29,11 +30,12 @@ func NewUser(email string, plainPassword string) (*User, error) {
 	}
 
 	return &User{
-		Email:             email,
-		Enabled:           false,
-		plainPassword:     plainPassword,
-		Password:          password,
-		ConfirmationToken: RandToken(64),
+		Email:               email,
+		Enabled:             false,
+		plainPassword:       plainPassword,
+		Password:            password,
+		ConfirmationToken:   RandToken(TokenLength),
+		ChangePasswordToken: RandToken(TokenLength),
 	}, nil
 }
 
@@ -51,7 +53,17 @@ func EncryptPassword(plainPassword string) (string, error) {
 }
 
 func (u *User) RegenerateChangePasswordToken() {
-	u.ChangePasswordToken = RandToken(64)
+	u.ChangePasswordToken = RandToken(TokenLength)
+}
+
+func (u *User) UpdatePassword(plainPassword string) error {
+	password, err := EncryptPassword(plainPassword)
+	if err != nil {
+		return err
+	}
+	u.Password = password
+
+	return nil
 }
 
 func RandToken(length int) string {

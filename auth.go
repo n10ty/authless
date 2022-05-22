@@ -64,9 +64,8 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 		SendJWTHeader:   opts.SendJWTHeader,
 		JWTQuery:        opts.JWTQuery,
 		Issuer:          config.Host,
-		//AudienceReader:  opts.AudienceReader,
-		AudSecrets: opts.AudSecrets,
-		SameSite:   opts.SameSiteCookie,
+		AudSecrets:      opts.AudSecrets,
+		SameSite:        opts.SameSiteCookie,
 	})
 
 	var authHandler AuthHandler
@@ -95,7 +94,7 @@ func (a *Auth) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
 }
 
 func (a *Auth) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
-	a.authHandler.ChangePasswordHandler(f)
+	a.authHandler.SetChangePasswordRequestFunc(f)
 }
 
 // Opts is a full set of all parameters to initialize Service

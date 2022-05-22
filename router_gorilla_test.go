@@ -42,7 +42,7 @@ func teatRedirectGorillaUp() {
 		log.Println(err)
 		return
 	}
-	auth.SetTokenSender(func(email, token string) error {
+	auth.SetActivationTokenSenderFunc(func(email, token string) error {
 		fmt.Println("TOKEN SEND", token)
 		return nil
 	})
@@ -57,21 +57,7 @@ func teatRedirectGorillaUp() {
 			w.Write([]byte("private"))
 		}),
 	)
-	//
-	//router.GET("/", func(c *gin.Context) {
-	//	c.String(200, "public")
-	//})
-	//router.GET("/public", func(c *gin.Context) {
-	//	c.String(200, "public")
-	//})
-	//router.GET("/user", auth.AuthRequired(func(c *gin.Context) {
-	//	user, err := token.GetUserInfo(c.Request)
-	//	if err != nil {
-	//		c.String(http.StatusInternalServerError, err.Error())
-	//		return
-	//	}
-	//	c.AbortWithStatusJSON(http.StatusOK, user)
-	//}))
+
 	log.Fatal(http.ListenAndServe(":8082", router))
 }
 

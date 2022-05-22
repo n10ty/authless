@@ -8,6 +8,7 @@ import (
 	"github.com/n10ty/authless/token"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -155,7 +156,7 @@ func TestRouterGinAPI(t *testing.T) {
 	})
 	t.Run("TestRegisterActivateFuncExecuted", func(t *testing.T) {
 		exec := false
-		ginAPIAuth.SetActivationTokenSender(func(email, token string) error {
+		ginAPIAuth.SetActivationTokenSenderFunc(func(email, token string) error {
 			exec = true
 			return nil
 		})
@@ -181,11 +182,7 @@ func TestRouterGinAPI(t *testing.T) {
 		assert.Equal(t, "{\"error\":\"incorrect email or password\"}\n", string(body))
 	})
 	t.Run("TestActivateAccount", func(t *testing.T) {
-		s, err := storage.NewInMemory(db)
-		assert.NoError(t, err)
-		u, err := s.GetUser(email)
-		assert.NoError(t, err)
-
+		u := getUser(t, email)
 		resp, err := http.Get(fmt.Sprintf("%s/auth/activate?token=%s", URL, u.ConfirmationToken))
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -235,6 +232,8 @@ func TestRouterGinAPI(t *testing.T) {
 		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
 	})
 	t.Run("TestChangePasswordExecuted", func(t *testing.T) {
+		u := getUser(t, email)
+		beforeToken := u.ChangePasswordToken
 		exec := false
 		ginAPIAuth.SetChangePasswordRequestFunc(func(email, token string) error {
 			assert.Equal(t, "a@a.a", email)
@@ -245,5 +244,39 @@ func TestRouterGinAPI(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.True(t, exec)
+
+		u = getUser(t, email)
+		afterToken := u.ChangePasswordToken
+		assert.NotEqualf(t, beforeToken, afterToken, "Change password tokens are equals: %s", beforeToken)
 	})
+	t.Run("TestChangePasswordSetPasswordSuccessfully", func(t *testing.T) {
+		u := getUser(t, email)
+		oldPasswordHash := u.Password
+		resp, err := http.PostForm(fmt.Sprintf("%s/auth/change-password", URL), url.Values{"token": {u.ChangePasswordToken}, "password": {"newpassword"}})
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		if resp.StatusCode != 200 {
+			body, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			t.Error(string(body))
+		}
+		u = getUser(t, email)
+		assert.NotEqual(t, oldPasswordHash, u.Password, "Password didn't changed")
+		err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte("newpassword"))
+		assert.NoError(t, err)
+	})
+	t.Run("TestChangePasswordWithBadTokenReturnError", func(t *testing.T) {
+		resp, err := http.PostForm(fmt.Sprintf("%s/auth/change-password", URL), url.Values{"token": {"badtoken"}, "password": {"newpassword"}})
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode)
+	})
+}
+
+func getUser(t *testing.T, email string) *storage.User {
+	s, err := storage.NewInMemory(db)
+	assert.NoError(t, err)
+	u, err := s.GetUser(email)
+	assert.NoError(t, err)
+
+	return u
 }

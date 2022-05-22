@@ -30,43 +30,43 @@ func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker 
 func (a *RedirectAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	if email == "" {
-		http.Redirect(w, r, "/register?error=Bad request", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/register?error=Bad request", http.StatusFound)
 		return
 	}
 	password := r.FormValue("password")
 	if password == "" {
-		http.Redirect(w, r, "/register?error=Bad request", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/register?error=Bad request", http.StatusFound)
 		return
 	}
 
 	if !passwordValid(password) {
-		http.Redirect(w, r, "/register?error=Password must be contains at least 6 symbols", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/register?error=Password must be contains at least 6 symbols", http.StatusFound)
 		return
 	}
 
 	if !emailValid(email) {
-		http.Redirect(w, r, "/register?error=Invalid email", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/register?error=Invalid email", http.StatusFound)
 		return
 	}
 
 	_, err := a.storage.GetUser(email)
 	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
 		log.Printf("internal error: %s", err)
-		http.Redirect(w, r, "/register?error=Email already exists", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/register?error=Email already exists", http.StatusFound)
 		return
 	}
 
 	user, err := storage.NewUser(email, password)
 	if err != nil {
 		log.Printf("internal error: %s", err)
-		http.Redirect(w, r, "/register?error=Internal error", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/register?error=Internal error", http.StatusFound)
 		return
 	}
 
 	err = a.storage.CreateUser(user)
 	if err != nil {
 		log.Printf("internal error: %s", err)
-		http.Redirect(w, r, "/register?error=Internal error", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/register?error=Internal error", http.StatusFound)
 		return
 	}
 
@@ -130,44 +130,44 @@ func (a *RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Reques
 	if a.successRedirectUrl == "" {
 		a.successRedirectUrl = "/"
 	}
-	http.Redirect(w, r, a.successRedirectUrl, 301)
+	http.Redirect(w, r, a.successRedirectUrl, http.StatusMovedPermanently)
 }
 
 func (a *RedirectAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	a.jwtService.Reset(w)
-	http.Redirect(w, r, "/", 301)
+	http.Redirect(w, r, "/", http.StatusMovedPermanently)
 }
 
 func (a *RedirectAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		http.Redirect(w, r, "/activate-result?error=Bad request", http.StatusFound)
+		http.Redirect(w, r, "/activate/result?error=Bad request", http.StatusFound)
 		return
 	}
 
 	user, err := a.storage.GetUserByConfirmationToken(token)
 	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
 		log.Printf("internal error: %s", err)
-		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		http.Redirect(w, r, "/activate/result?error=Internal error", http.StatusFound)
 		return
 	} else if errors.Is(err, storage.ErrUserNotFound) {
-		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
+		http.Redirect(w, r, "/activate/result?error=Bad token", http.StatusFound)
 		return
 	}
 
 	if user.ConfirmationToken != token {
-		http.Redirect(w, r, "/activate-result?error=Bad token", http.StatusFound)
+		http.Redirect(w, r, "/activate/result?error=Bad token", http.StatusFound)
 		return
 	}
 
 	user.Enabled = true
 	if err := a.storage.UpdateUser(user); err != nil {
 		log.Printf("internal error: %s", err)
-		http.Redirect(w, r, "/activate-result?error=Internal error", http.StatusFound)
+		http.Redirect(w, r, "/activate/result?error=Internal error", http.StatusFound)
 		return
 	}
 
-	http.Redirect(w, r, "/activate-result", http.StatusFound)
+	http.Redirect(w, r, "/activate/result", http.StatusFound)
 }
 
 // getCredentials extracts user and password from request
@@ -219,42 +219,83 @@ func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Requ
 
 func (a *RedirectAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
-	if email == "" {
+	log.Info(email)
+	if len(email) < 5 {
 		log.Info("change password: empty email")
-		renderJSONWithStatus(w, JSON{"error": "bad request"}, http.StatusBadRequest)
+		http.Redirect(w, r, "/forget-password?error=Bad request", http.StatusMovedPermanently)
 		return
 	}
 
 	user, err := a.storage.GetUser(email)
 	if err != nil {
 		log.Printf("change password: %s", err)
-		renderJSONWithStatus(w, nil, http.StatusOK)
+		http.Redirect(w, r, "/change-password/result", http.StatusFound)
 		return
 	}
 	if !user.Enabled {
-		renderJSONWithStatus(w, nil, http.StatusOK)
+		http.Redirect(w, r, "/change-password/result", http.StatusFound)
 		return
 	}
 
 	user.RegenerateChangePasswordToken()
 	if err := a.storage.UpdateUser(user); err != nil {
 		log.Printf("update user error: %s", err)
-		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		http.Redirect(w, r, "/activate/result?error=Internal error", http.StatusFound)
 		return
 	}
 	if err := a.changePasswordRequestFunc(email, user.ChangePasswordToken); err != nil {
 		log.Printf("change password execution error: %s", err)
-		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
+		http.Redirect(w, r, "/activate/result?error=Internal error", http.StatusFound)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	http.Redirect(w, r, "/forget-password", http.StatusFound)
+}
+
+func (a *RedirectAuthHandler) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.FormValue("token")
+	password := r.FormValue("password")
+	if token == "" || password == "" {
+		log.Info("change request: empty password or token")
+		http.Redirect(w, r, "/change-password/result?error=Bad request", http.StatusFound)
+		return
+	}
+
+	user, err := a.storage.GetUserByChangePasswordToken(token)
+	if err != nil && !errors.Is(err, storage.ErrUserNotFound) {
+		log.Errorf("internal error: %s", err)
+		http.Redirect(w, r, "/change-password/result?error=Internal error", http.StatusFound)
+		return
+	} else if errors.Is(err, storage.ErrUserNotFound) {
+		http.Redirect(w, r, "/change-password/result", http.StatusFound)
+		return
+	}
+
+	if !user.Enabled || user.ChangePasswordToken == "" || user.ChangePasswordToken != token {
+		http.Redirect(w, r, "/change-password/result?error=Bad request", http.StatusFound)
+		return
+	}
+
+	log.Infof("Change password: %s", password)
+	if err = user.UpdatePassword(password); err != nil {
+		log.Errorf("internal error: %s", err)
+		http.Redirect(w, r, "/change-password/result?error=Internal error", http.StatusFound)
+		return
+	}
+
+	if err := a.storage.UpdateUser(user); err != nil {
+		log.Errorf("internal error: %s", err)
+		http.Redirect(w, r, "/change-password/result?error=Internal error", http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, "/change-password/result", http.StatusFound)
 }
 
 func (a *RedirectAuthHandler) SetActivationTokenSenderFunc(f TokenSenderFunc) {
 	a.tokenSenderFunc = f
 }
 
-func (a *RedirectAuthHandler) ChangePasswordHandler(f ChangePasswordRequestFunc) {
+func (a *RedirectAuthHandler) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
 	a.changePasswordRequestFunc = f
 }

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 	"os"
 )
 
@@ -48,7 +48,7 @@ func (m *InMemory) AuthenticateUser(email, password string) (bool, error) {
 		if err != nil && !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			log.Printf("[ERROR] internal error: %s\n", err)
 			return false, errors.New("internal error")
-		} else if err == nil && errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+		} else if err != nil {
 			return false, nil
 		}
 		return u.Enabled, nil
@@ -71,6 +71,16 @@ func (m *InMemory) GetUserByConfirmationToken(token string) (*User, error) {
 	} else {
 		return &user, nil
 	}
+}
+
+func (m *InMemory) GetUserByChangePasswordToken(token string) (*User, error) {
+	for _, user := range m.users {
+		if user.ChangePasswordToken == token {
+			return &user, nil
+		}
+	}
+
+	return nil, ErrUserNotFound
 }
 
 func (m *InMemory) CreateUser(user *User) error {

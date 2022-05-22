@@ -68,7 +68,7 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 			tplTxt.Execute(w, map[string]any{"error": template.HTML(r.FormValue("error"))})
 		})
 
-	router.Path("/activate-result").Methods(http.MethodGet).HandlerFunc(
+	router.Path("/activate/result").Methods(http.MethodGet).HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			errorMessage := r.FormValue("error")
@@ -90,6 +90,6 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 		})
 }
 
-func (g *GorillaAuth) SetTokenSender(senderFunc TokenSenderFunc) {
+func (g *GorillaAuth) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
 	g.auth.SetActivationTokenSenderFunc(senderFunc)
 }
