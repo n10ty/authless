@@ -17,7 +17,7 @@ const AuthTypeAPI = "api"
 type Auth struct {
 	storage         storage.Storage
 	config          *Config
-	tokenSenderFunc TokenSenderFunc
+	tokenSenderFunc ActivateAccountFunc
 	authHandler     AuthHandler
 	jwtService      *token.Service
 }
@@ -86,10 +86,10 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 	return a
 }
 
-type TokenSenderFunc = func(email, token string) error
+type ActivateAccountFunc = func(email, token string) error
 type ChangePasswordRequestFunc = func(email, token string) error
 
-func (a *Auth) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
+func (a *Auth) SetActivationTokenSenderFunc(senderFunc ActivateAccountFunc) {
 	a.authHandler.SetActivationTokenSenderFunc(senderFunc)
 }
 

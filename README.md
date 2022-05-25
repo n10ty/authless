@@ -6,7 +6,7 @@ on cookie JWT token with multiple storage support.
 * Registration
 * Login
 * JWT token via cookie
-* Some custom html templates read to use
+* Out of the box HTML templates read to use
 * Or use it only as a backend with your own frontend
 * Confirmation token
 * Multiple router supports (Gin, standard, etc.)
@@ -45,7 +45,7 @@ func main() {
 }
 ```
 
-## Config
+#### Config
 
 ```yaml
 appName: myapp.com // your domain
@@ -61,14 +61,14 @@ storage:
   dbname: test_auth
 ```
 
-## HTML templates
+#### HTML templates
 
 There are ready to use html login/registration forms. To use it
 copy `template` folder to your project root.
 
 ![Image](/login-form.png)
 
-## Routes
+## API Routes
 
 ### Login
 Call GET ```/auth/login?email=test@example.com&passwd=xyz```
@@ -95,12 +95,14 @@ to create new user. Created user is not active and unable to login.
 
 #### Send activation token
 
-Use `TokenSenderFunc = func(email, token string) error` to send token during registration
+Use `ActivateAccountFunc = func(email, url, token string) error` to send token during registration
+
 Example: 
 ```go
 auth, _ := authless.NewGinAuth(configPath)
 client := NewMailerClient(somekey)
-auth.SetTokenSender(func(email, token string) error {
+auth.SetActivationTokenSenderFunc(func(email, activateUrl, token string) error {
+    //make user go to activateUrl to activate accoung
     return client.SendEmail(email, token)
 })
 ```
@@ -109,12 +111,31 @@ auth.SetTokenSender(func(email, token string) error {
 Call GET ```/auth/activate?token=mytoken```
 to activate account to able account to login
 
+### Change password request
+To send change password request use ```/auth/change-password/request```.
+This will generate new token and execute `ChangePasswordRequestFunc`
+
+#### Send change password token
+Use:
+
+`type ChangePasswordRequestFunc = func(email, token string) error`
+
+Example:
+```go
+auth, _ := authless.NewGinAuth(configPath)
+client := NewMailerClient(somekey)
+auth.SetChangePasswordRequestFunc(func(email, url, token string) error {
+    return clien.SendChangePassword
+})
+```
+
 Todo:
 
 - [x] Add tests
 - [x] Add gorilla http router
 - [x] Add default http router
-- [ ] Forget password
+- [x] Forget password mux
+- [ ] Forget password gorilla
 - [x] Get rid of /r/
 - [x] Add global auth.GetUser method
 - [x] Fully get rid of authz package
@@ -126,3 +147,4 @@ Todo:
 - [ ] Pass full url to forget pass/validate acc functions
 - [ ] Blacklist of expired tokens (after logout token invalid)
 - [ ] Get rid of error message in query ?error=bad request
+- [ ] Routes as const

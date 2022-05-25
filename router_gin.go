@@ -64,8 +64,16 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 		router.GET("/forget-password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "forget_password_form.html", gin.H{"error": c.Query("error")})
 		})
-		router.GET("/forget-password-success", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "forget_password_success.html", nil)
+		router.GET("/forget-password/result", func(c *gin.Context) {
+			err := c.Query("error")
+			params := gin.H{}
+			if err != "" {
+				params["error"] = c.Query("error")
+			} else {
+				params["success"] = "Change password request has been sent. Please check your email."
+			}
+			c.HTML(http.StatusOK, "forget_password_result.html", params)
+			return
 		})
 		router.GET("/change-password", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "change_password_form.html", gin.H{"token": c.Query("token")})
@@ -84,7 +92,7 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	}
 }
 
-func (g *GinAuth) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
+func (g *GinAuth) SetActivationTokenSenderFunc(senderFunc ActivateAccountFunc) {
 	g.auth.SetActivationTokenSenderFunc(senderFunc)
 }
 

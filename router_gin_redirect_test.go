@@ -243,21 +243,21 @@ func TestRouterRedirectGin(t *testing.T) {
 
 		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
 	})
-	t.Run("TestChangePasswordWithEmptyEmailRedirectError", func(t *testing.T) {
-		resp, err := httpClient.PostForm(redirectURL+"/auth/change-password/request", url.Values{"email": {"a."}})
+	t.Run("TestForgetPasswordWithEmptyEmailRedirectError", func(t *testing.T) {
+		resp, err := httpClient.PostForm(redirectURL+"/auth/forget-password/request", url.Values{"email": {"a."}})
 		assert.NoError(t, err)
 		assert.Equal(t, 301, resp.StatusCode)
 		url, err := resp.Location()
-		assert.Equal(t, redirectURL+"/forget-password?error=Bad request", url.String())
+		assert.Equal(t, redirectURL+"/forget-password/result?error=Bad request", url.String())
 	})
-	t.Run("TestChangePasswordRequestWithNotExistsUserIsOk", func(t *testing.T) {
-		resp, err := httpClient.PostForm(redirectURL+"/auth/change-password/request", url.Values{"email": {"a.22333@ddd.rrr"}})
+	t.Run("TestForgetPasswordRequestWithNotExistsUserIsOk", func(t *testing.T) {
+		resp, err := httpClient.PostForm(redirectURL+"/auth/forget-password/request", url.Values{"email": {"a.22333@ddd.rrr"}})
 		assert.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
-		assert.Equal(t, redirectURL+"/change-password/result", url.String())
+		assert.Equal(t, redirectURL+"/forget-password/result", url.String())
 	})
-	t.Run("TestChangePasswordExecuted", func(t *testing.T) {
+	t.Run("TestForgetPasswordExecuted", func(t *testing.T) {
 		u := getUser(t, email)
 		beforeToken := u.ChangePasswordToken
 
@@ -267,7 +267,7 @@ func TestRouterRedirectGin(t *testing.T) {
 			exec = true
 			return nil
 		})
-		resp, err := httpClient.PostForm(redirectURL+"/auth/change-password/request", url.Values{"email": {email}})
+		resp, err := httpClient.PostForm(redirectURL+"/auth/forget-password/request", url.Values{"email": {email}})
 		assert.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		assert.True(t, exec)
@@ -291,7 +291,7 @@ func TestRouterRedirectGin(t *testing.T) {
 	t.Run("TestChangePasswordSetPasswordSuccessfully", func(t *testing.T) {
 		u := getUser(t, email)
 		oldPasswordHash := u.Password
-		resp, err := httpClient.PostForm(fmt.Sprintf("%s/auth/change-password", redirectURL), url.Values{"token": {u.ChangePasswordToken}, "password": {"newpassword"}})
+		resp, err := httpClient.PostForm(fmt.Sprintf("%s/change-password", redirectURL), url.Values{"token": {u.ChangePasswordToken}, "password": {"newpassword"}})
 		assert.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
