@@ -40,13 +40,13 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	auth.POST("/change-password", gin.WrapF(g.auth.authHandler.ChangePasswordHandler))
 
 	if g.auth.config.Type == AuthTypeTemplate {
-		router.GET("/success", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "registration_success.html", nil)
-		})
 		router.GET("/login", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "login_form.html", gin.H{"error": c.Query("error")})
 		})
 		router.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
+		router.GET("/register/success", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "registration_result.html", gin.H{"message": "Successfully registered"})
+		})
 		router.GET("/register", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "registration_form.html", gin.H{"error": c.Query("error")})
 		})
@@ -56,7 +56,7 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 			if err != "" {
 				params["error"] = c.Query("error")
 			} else {
-				params["success"] = "Activated successfully"
+				params["message"] = "Activated successfully"
 			}
 			c.HTML(http.StatusOK, "activation_result.html", params)
 			return
@@ -70,13 +70,13 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 			if err != "" {
 				params["error"] = c.Query("error")
 			} else {
-				params["success"] = "Change password request has been sent. Please check your email."
+				params["message"] = "Change password request has been sent. Please check your email."
 			}
 			c.HTML(http.StatusOK, "forget_password_result.html", params)
 			return
 		})
 		router.GET("/change-password", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "change_password_form.html", gin.H{"token": c.Query("token")})
+			c.HTML(http.StatusOK, "change_password_form.html", gin.H{"token": c.Query("token"), "error": c.Query("error")})
 		})
 		router.GET("/change-password/result", func(c *gin.Context) {
 			err := c.Query("error")

@@ -130,6 +130,56 @@ auth.SetChangePasswordRequestFunc(func(email, url, token string) error {
 ```
 
 ## HTML Routes
+List of available routes: 
+
+#### Login
+Path: `/login` \
+Template path: `template/login_form.html` \
+Vars: `{{.error}}`
+
+#### Logout
+Path: `/logout` \
+Template path: -
+
+#### Registration form
+Path: `/register` \
+Template path: `template/registration_form.html` \
+Vars: `{{.error}}` 
+
+#### Registration success page
+Path: `/register/result` \
+Template path: `template/registration_form.html` \
+Vars: `{{.message}}`
+
+#### Activate result
+Path: `/activate/result` \
+Template: `template/activation_result.html` \
+Vars: `{{.error}}` `{{.message}}`
+
+#### Forget password form
+Description: display form for password remind
+Path: `/forget-password` \
+Template: `forget_password_form.html` \
+Vars: `{{.error}}` 
+
+#### Forget password result page
+Description: page to show after successfully remind password submission  
+Path: `/forget-password/result` \
+Template: `forget_password_result.html` \
+Vars: `{{.error}}` `{{.message}}`
+
+#### Change password form
+Description: display change password form  
+Path: `/change-password` \
+Template: `change_password_form.html` \
+Vars: `{{.error}}`
+
+#### Change password result page
+Description: page to show after successfully change password submission
+Path: `/change-password/result` \
+Template: `change_password_result.html` \
+Vars: `{{.error}}` `{{.message}}`
+
 
 Todo:
 

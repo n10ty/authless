@@ -43,7 +43,7 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 
 	if g.auth.config.Type == AuthTypeTemplate {
 		router.Path("/success").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "registration_success.html")
+			http.ServeFile(w, r, "registration_result.html")
 		})
 
 		router.Path("/login").Methods(http.MethodGet).HandlerFunc(
@@ -103,7 +103,7 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 				tplTxt.Execute(w, map[string]any{"error": template.HTML(r.FormValue("error"))})
 			})
 		router.Path("/success").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "registration_success.html")
+			http.ServeFile(w, r, "registration_result.html")
 		})
 	}
 }
