@@ -21,7 +21,7 @@ type AuthHandler interface {
 	LogoutHandler(http.ResponseWriter, *http.Request)
 	RegistrationHandler(http.ResponseWriter, *http.Request)
 	ActivationHandler(http.ResponseWriter, *http.Request)
-	SetActivationTokenSenderFunc(TokenSenderFunc)
+	SetActivationTokenSenderFunc(ActivateAccountFunc)
 	ChangePasswordRequestHandler(http.ResponseWriter, *http.Request)
 	SetChangePasswordRequestFunc(ChangePasswordRequestFunc)
 	ChangePasswordHandler(http.ResponseWriter, *http.Request)

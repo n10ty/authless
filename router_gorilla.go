@@ -25,7 +25,7 @@ func (g *GorillaAuth) AuthRequired(handler func(w http.ResponseWriter, r *http.R
 	return func(w http.ResponseWriter, r *http.Request) {
 		ww := &responseWriter{}
 		ww.reset(w)
-		doAuth(g.auth.config.Type == AuthTypeRedirect, ww, r)
+		doAuth(g.auth.config.Type == AuthTypeTemplate, ww, r)
 		if ww.Status() == http.StatusUnauthorized {
 			return
 		}
@@ -41,7 +41,7 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 	router.Path("/auth/change-password/request").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ChangePasswordRequestHandler)
 	router.Path("/auth/change-password").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ChangePasswordHandler)
 
-	if g.auth.config.Type == AuthTypeRedirect {
+	if g.auth.config.Type == AuthTypeTemplate {
 		router.Path("/success").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "registration_success.html")
 		})
@@ -108,6 +108,6 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 	}
 }
 
-func (g *GorillaAuth) SetActivationTokenSenderFunc(senderFunc TokenSenderFunc) {
+func (g *GorillaAuth) SetActivationTokenSenderFunc(senderFunc ActivateAccountFunc) {
 	g.auth.SetActivationTokenSenderFunc(senderFunc)
 }

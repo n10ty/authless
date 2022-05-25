@@ -42,7 +42,7 @@ func tearGinRedirectUp() {
 		TokenDuration:      time.Minute,
 		CookieDuration:     time.Minute,
 		Storage:            storage.Config{Type: storage.TypeInMemory, FileStoragePath: db},
-		Type:               authless.AuthTypeRedirect,
+		Type:               authless.AuthTypeTemplate,
 		LogLevel:           "debug",
 		TemplatePath:       "",
 		Validator:          nil,

@@ -51,7 +51,7 @@ func main() {
 appName: myapp.com // your domain
 secret: mysecret // generate random secret
 disablexsrf: false
-type: redirect // 'redirect' or 'api'
+type: html // 'html' or 'api'
 storage:
   type: mysql  // mysql, const (setup by config), postgres
   host: localhost
@@ -125,9 +125,11 @@ Example:
 auth, _ := authless.NewGinAuth(configPath)
 client := NewMailerClient(somekey)
 auth.SetChangePasswordRequestFunc(func(email, url, token string) error {
-    return clien.SendChangePassword
+    return client.SendChangePassword
 })
 ```
+
+## HTML Routes
 
 Todo:
 

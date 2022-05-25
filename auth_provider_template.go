@@ -13,21 +13,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type RedirectAuthHandler struct {
+type TemplateAuthHandler struct {
 	host                      string
 	successRedirectUrl        string
 	credChecker               CredCheckerFunc
 	jwtService                *token.Service
 	storage                   storage.Storage
-	tokenSenderFunc           TokenSenderFunc
+	activateAccountFunc       ActivateAccountFunc
 	changePasswordRequestFunc ChangePasswordRequestFunc
 }
 
-func NewRedirectAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *RedirectAuthHandler {
-	return &RedirectAuthHandler{host: host, successRedirectUrl: successRedirectUrl, credChecker: credChecker, jwtService: jwtService, storage: storage}
+func NewTemplateAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *TemplateAuthHandler {
+	return &TemplateAuthHandler{host: host, successRedirectUrl: successRedirectUrl, credChecker: credChecker, jwtService: jwtService, storage: storage}
 }
 
-func (a *RedirectAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
+func (a *TemplateAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	if email == "" {
 		http.Redirect(w, r, "/register?error=Bad request", http.StatusFound)
@@ -70,8 +70,8 @@ func (a *RedirectAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	if a.tokenSenderFunc != nil {
-		if err := a.tokenSenderFunc(email, user.ConfirmationToken); err != nil {
+	if a.activateAccountFunc != nil {
+		if err := a.activateAccountFunc(email, user.ConfirmationToken); err != nil {
 			log.Errorf("error during send activation token: %s", err)
 		}
 	}
@@ -79,7 +79,7 @@ func (a *RedirectAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http
 	http.Redirect(w, r, "/success", http.StatusFound)
 }
 
-func (a *RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (a *TemplateAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	creds, err := a.getCredentials(w, r)
 	if err != nil {
 		log.Println("failed to parse credentials")
@@ -133,12 +133,12 @@ func (a *RedirectAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Reques
 	http.Redirect(w, r, a.successRedirectUrl, http.StatusMovedPermanently)
 }
 
-func (a *RedirectAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+func (a *TemplateAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	a.jwtService.Reset(w)
 	http.Redirect(w, r, "/", http.StatusMovedPermanently)
 }
 
-func (a *RedirectAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
+func (a *TemplateAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		http.Redirect(w, r, "/activate/result?error=Bad request", http.StatusFound)
@@ -171,7 +171,7 @@ func (a *RedirectAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.R
 }
 
 // getCredentials extracts user and password from request
-func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
+func (a *TemplateAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
 
 	// GET /something?user=name&passwd=xyz&aud=bar
 	if r.Method == "GET" {
@@ -217,7 +217,7 @@ func (a *RedirectAuthHandler) getCredentials(w http.ResponseWriter, r *http.Requ
 	}, nil
 }
 
-func (a *RedirectAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
+func (a *TemplateAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	log.Info(email)
 	if len(email) < 5 {
@@ -252,7 +252,7 @@ func (a *RedirectAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter
 	http.Redirect(w, r, "/forget-password/result", http.StatusFound)
 }
 
-func (a *RedirectAuthHandler) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+func (a *TemplateAuthHandler) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.FormValue("token")
 	password := r.FormValue("password")
 	if token == "" || password == "" {
@@ -292,10 +292,10 @@ func (a *RedirectAuthHandler) ChangePasswordHandler(w http.ResponseWriter, r *ht
 	http.Redirect(w, r, "/change-password/result", http.StatusFound)
 }
 
-func (a *RedirectAuthHandler) SetActivationTokenSenderFunc(f TokenSenderFunc) {
-	a.tokenSenderFunc = f
+func (a *TemplateAuthHandler) SetActivationTokenSenderFunc(f ActivateAccountFunc) {
+	a.activateAccountFunc = f
 }
 
-func (a *RedirectAuthHandler) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
+func (a *TemplateAuthHandler) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
 	a.changePasswordRequestFunc = f
 }

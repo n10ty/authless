@@ -17,7 +17,7 @@ type Config struct {
 	CookieDuration     time.Duration
 	SendJWTHeader      bool
 	Storage            storage.Config
-	Type               string // redirect or api
+	Type               string // template or api
 	TemplatePath       string
 	Validator          token.ValidatorFunc
 	SuccessRedirectUrl string

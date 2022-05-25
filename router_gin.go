@@ -21,7 +21,7 @@ func NewGinAuth(config *Config) (*GinAuth, error) {
 
 func (g *GinAuth) AuthRequired(handler func(c *gin.Context)) func(c *gin.Context) {
 	return func(context *gin.Context) {
-		doAuth(g.auth.config.Type == AuthTypeRedirect, context.Writer, context.Request)
+		doAuth(g.auth.config.Type == AuthTypeTemplate, context.Writer, context.Request)
 		if context.Writer.Status() == http.StatusUnauthorized {
 			return
 		}
@@ -39,7 +39,7 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	auth.POST("/change-password/request", gin.WrapF(g.auth.authHandler.ChangePasswordRequestHandler))
 	auth.POST("/change-password", gin.WrapF(g.auth.authHandler.ChangePasswordHandler))
 
-	if g.auth.config.Type == AuthTypeRedirect {
+	if g.auth.config.Type == AuthTypeTemplate {
 		router.GET("/success", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "registration_success.html", nil)
 		})

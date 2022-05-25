@@ -11,15 +11,14 @@ import (
 
 var a *Auth
 
-const AuthTypeRedirect = "redirect"
+const AuthTypeTemplate = "template"
 const AuthTypeAPI = "api"
 
 type Auth struct {
-	storage         storage.Storage
-	config          *Config
-	tokenSenderFunc ActivateAccountFunc
-	authHandler     AuthHandler
-	jwtService      *token.Service
+	storage     storage.Storage
+	config      *Config
+	authHandler AuthHandler
+	jwtService  *token.Service
 }
 
 func initAuth(config *Config) error {
@@ -70,10 +69,10 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 
 	var authHandler AuthHandler
 
-	if config.Type == AuthTypeRedirect {
-		authHandler = NewRedirectAuthHandler(config.Host, config.SuccessRedirectUrl, credChecker, jwtService, storage)
+	if config.Type == AuthTypeTemplate {
+		authHandler = NewTemplateAuthHandler(config.Host, config.SuccessRedirectUrl, credChecker, jwtService, storage)
 	} else {
-		authHandler = NewApiAuthHandler(config.Host, config.SuccessRedirectUrl, credChecker, jwtService, storage)
+		authHandler = NewApiAuthHandler(config.Host, credChecker, jwtService, storage)
 	}
 
 	a = &Auth{

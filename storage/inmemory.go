@@ -17,7 +17,7 @@ type InMemory struct {
 }
 
 func NewInMemory(path string) (*InMemory, error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 777)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0777)
 	if err != nil {
 		panic(err)
 	}

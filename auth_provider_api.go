@@ -26,16 +26,15 @@ type credentials struct {
 // ApiAuthHandler aims to handle unauthorized requests and errors as json
 type ApiAuthHandler struct {
 	host                      string
-	successRedirectUrl        string
 	credChecker               CredCheckerFunc
 	jwtService                *token.Service
 	storage                   storage.Storage
-	tokenSenderFunc           TokenSenderFunc
+	activateAccountFunc       ActivateAccountFunc
 	changePasswordRequestFunc ChangePasswordRequestFunc
 }
 
-func NewApiAuthHandler(host string, successRedirectUrl string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *ApiAuthHandler {
-	return &ApiAuthHandler{host: host, successRedirectUrl: successRedirectUrl, credChecker: credChecker, jwtService: jwtService, storage: storage}
+func NewApiAuthHandler(host string, credChecker CredCheckerFunc, jwtService *token.Service, storage storage.Storage) *ApiAuthHandler {
+	return &ApiAuthHandler{host: host, credChecker: credChecker, jwtService: jwtService, storage: storage}
 }
 
 func (a *ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -80,10 +79,6 @@ func (a *ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err = a.jwtService.Set(w, claims); err != nil {
 		renderJSONWithStatus(w, JSON{"error": "internal error"}, http.StatusInternalServerError)
 		return
-	}
-
-	if a.successRedirectUrl == "" {
-		a.successRedirectUrl = "/"
 	}
 
 	tkn, err := a.jwtService.Token(claims)
@@ -171,8 +166,8 @@ func (a *ApiAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if a.tokenSenderFunc != nil {
-		if err := a.tokenSenderFunc(email, user.ConfirmationToken); err != nil {
+	if a.activateAccountFunc != nil {
+		if err := a.activateAccountFunc(email, user.ConfirmationToken); err != nil {
 			log.Errorf("error during send activation token: %s", err)
 		}
 	}
@@ -298,8 +293,8 @@ func (a *ApiAuthHandler) getCredentials(w http.ResponseWriter, r *http.Request) 
 	}, nil
 }
 
-func (a *ApiAuthHandler) SetActivationTokenSenderFunc(f TokenSenderFunc) {
-	a.tokenSenderFunc = f
+func (a *ApiAuthHandler) SetActivationTokenSenderFunc(f ActivateAccountFunc) {
+	a.activateAccountFunc = f
 }
 
 func (a *ApiAuthHandler) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
