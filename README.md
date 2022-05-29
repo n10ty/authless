@@ -45,22 +45,6 @@ func main() {
 }
 ```
 
-#### Config
-
-```yaml
-appName: myapp.com // your domain
-secret: mysecret // generate random secret
-disablexsrf: false
-type: html // 'html' or 'api'
-storage:
-  type: mysql  // mysql, const (setup by config), postgres
-  host: localhost
-  port: 3306
-  username: root
-  password: 12345
-  dbname: test_auth
-```
-
 ## Config
 You can create config object in code:
 ```go
@@ -71,16 +55,16 @@ config := &authless.Config{
     TokenDuration:      time.Minute,
     CookieDuration:     time.Minute,
     Storage:            storage.Config{
-        Type:            "mysql",
+        Type:            "mysql",   // mysql, const (setup by config), postgres, inmemory
         Host:            "localhost",
         Port:            3306,
         Username:        "user",
         Password:        "pass",
         Dbname:          "myusers",
     },
-    Type:               authless.AuthTypeTemplate,
-    LogLevel:           "debug",
-    TemplatePath:       "",
+    Type:               authless.AuthTypeTemplate, // 'template' or 'api'
+    LogLevel:           "debug", // debug, info, warning, error
+    TemplatePath:       "", // path to template folder
     Validator:          nil,
 }
 ```
@@ -92,8 +76,6 @@ conf, err := authless.ReadConfig(path)
 ```
 
 **Caveat: yaml parser property names are case-insensitive**
-
----------------------
 
 ## HTML templates
 
@@ -142,8 +124,6 @@ Use it in the same way as Gin, except creating:
 ```go
 auth, err := authless.NewGorillaAuth(conf)
 ```
-
----------------
 
 ## API Routes
 
@@ -219,8 +199,6 @@ To change password send POST form to `/auth/change-password`
         "password": "newpassword",
     }
 
---------------------
-
 ## HTML Routes
 To override page:
 * create your own html page
@@ -277,6 +255,7 @@ Description: page to show after successfully change password submission
 Path: `/change-password/result` \
 Template: `template/change_password_result.html` \
 Vars: `{{.error}}` `{{.message}}`
+
 
 -----------------------------------
 
