@@ -128,7 +128,7 @@ func TestRouterGinAPI(t *testing.T) {
 			exec = true
 			return nil
 		})
-		resp, err := http.PostForm(URL+"/auth/change-password/request", url.Values{"email": {email}})
+		resp, err := http.PostForm(URL+"/auth/forget-password", url.Values{"email": {email}})
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
@@ -149,7 +149,7 @@ func TestRouterGinAPI(t *testing.T) {
 			exec = true
 			return nil
 		})
-		resp, err := http.PostForm(URL+"/auth/change-password/request", url.Values{"email": {email}})
+		resp, err := http.PostForm(URL+"/auth/forget-password", url.Values{"email": {email}})
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
@@ -240,7 +240,7 @@ func TestRouterGinAPI(t *testing.T) {
 			exec = true
 			return nil
 		})
-		resp, err := http.PostForm(URL+"/auth/change-password/request", url.Values{"email": {email}})
+		resp, err := http.PostForm(URL+"/auth/forget-password/", url.Values{"email": {email}})
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.True(t, exec)

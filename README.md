@@ -12,8 +12,8 @@ on cookie JWT token with multiple storage support.
 * Multiple router supports (Gin, standard, etc.)
 * Multiple storage supports (Mysql, Postgres, config, "create your own", ...)
 
-## Getting started
-With Gin: 
+## Fast start
+With Gin ([Routers](#Routers)):
 ``` go
 func main() {
 	configPath := "./default.yml"
@@ -111,8 +111,12 @@ auth.SetActivationTokenSenderFunc(func(email, activateUrl, token string) error {
 Call GET ```/auth/activate?token=mytoken```
 to activate account to able account to login
 
-### Change password request
-To send change password request use ```/auth/change-password/request```.
+### Forget password
+To send change password send POST form to ```/auth/forget-password```:
+
+    {
+        "email": "test@example.com",
+    }
 This will generate new token and execute `ChangePasswordRequestFunc`
 
 #### Send change password token
@@ -129,7 +133,22 @@ auth.SetChangePasswordRequestFunc(func(email, url, token string) error {
 })
 ```
 
+### Change password
+To change password send POST form to `/auth/change-password`
+
+    {
+        "email": "test@example.com",
+        "token": "TOKEN", //TOKEN sent by ChangePasswordRequestFunc
+        "password": "newpassword",
+    }
+
 ## HTML Routes
+To override page:
+* create your own html page
+* insert _Vars_ into your template. Under _Var_ message or error text will be displayed
+* rename html and put under _Template path_
+* template will be available under _Path_
+
 List of available routes: 
 
 #### Login
@@ -180,6 +199,15 @@ Path: `/change-password/result` \
 Template: `change_password_result.html` \
 Vars: `{{.error}}` `{{.message}}`
 
+
+## Routers
+
+### Gin
+We recommend to use [Gin](https://github.com/gin-gonic/gin) as main router
+To create new `auth`:
+```go
+auth, err := authless.NewGorillaAuth(conf)
+```
 
 Todo:
 
