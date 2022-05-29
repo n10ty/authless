@@ -6,6 +6,7 @@ on cookie JWT token with multiple storage support.
 * Registration
 * Login
 * JWT token via cookie
+* XSRF protection
 * Out of the box HTML templates read to use
 * Or use it only as a backend with your own frontend
 * Confirmation token
