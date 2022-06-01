@@ -36,7 +36,7 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 	auth.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
 	auth.POST("/register", gin.WrapF(g.auth.authHandler.RegistrationHandler))
 	auth.GET("/activate", gin.WrapF(g.auth.authHandler.ActivationHandler))
-	auth.POST("/forget-password", gin.WrapF(g.auth.authHandler.ChangePasswordRequestHandler))
+	auth.POST("/forget-password", gin.WrapF(g.auth.authHandler.ForgetPasswordRequestHandler))
 	auth.POST("/change-password", gin.WrapF(g.auth.authHandler.ChangePasswordHandler))
 
 	if g.auth.config.Type == AuthTypeTemplate {

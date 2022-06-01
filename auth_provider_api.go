@@ -93,7 +93,7 @@ func (a *ApiAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *ApiAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	a.jwtService.Reset(w)
-	http.Redirect(w, r, "/", 301)
+	http.Redirect(w, r, "/", 302)
 }
 
 func (a *ApiAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
@@ -174,7 +174,7 @@ func (a *ApiAuthHandler) RegistrationHandler(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *ApiAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
+func (a *ApiAuthHandler) ForgetPasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	if email == "" {
 		log.Info("change password: empty email")

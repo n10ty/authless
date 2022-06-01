@@ -22,7 +22,7 @@ type AuthHandler interface {
 	RegistrationHandler(http.ResponseWriter, *http.Request)
 	ActivationHandler(http.ResponseWriter, *http.Request)
 	SetActivationTokenSenderFunc(ActivateAccountFunc)
-	ChangePasswordRequestHandler(http.ResponseWriter, *http.Request)
+	ForgetPasswordRequestHandler(http.ResponseWriter, *http.Request)
 	SetChangePasswordRequestFunc(ChangePasswordRequestFunc)
 	ChangePasswordHandler(http.ResponseWriter, *http.Request)
 }

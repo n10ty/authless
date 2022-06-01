@@ -228,3 +228,4 @@ Todo:
 - [ ] Blacklist of expired tokens (after logout token invalid)
 - [ ] Get rid of error message in query ?error=bad request
 - [ ] Routes as const
+- [ ] Min config to start: storage only

@@ -8,6 +8,7 @@ import (
 	"github.com/n10ty/authless/token"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 	"io/ioutil"
 	"net/http"
@@ -92,32 +93,32 @@ func TestRouterGinAPI(t *testing.T) {
 
 	t.Run("TestAccessPrivateNotAuthorized", func(t *testing.T) {
 		resp, err := http.Get(URL + "/private")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 401, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "{\"error\":\"unauthorized\"}\n", string(body))
 	})
 	t.Run("TestLoginUserNotExists", func(t *testing.T) {
 		resp, err := http.Get(fmt.Sprintf("%s/auth/login?email=%s&password=%s", URL, email, passw))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "{\"error\":\"incorrect email or password\"}\n", string(body))
 	})
 	t.Run("TestRegisterShortPasswordError", func(t *testing.T) {
 		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {email}, "password": {"1"}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.JSONEq(t, `{"error":"password must be contains at least 6 symbols"}`, string(body))
 	})
 	t.Run("TestInvalidEmailError", func(t *testing.T) {
 		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {"233"}, "password": {passw}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
 		assert.JSONEq(t, `{"error":"invalid email"}`, string(body))
@@ -129,17 +130,17 @@ func TestRouterGinAPI(t *testing.T) {
 			return nil
 		})
 		resp, err := http.PostForm(URL+"/auth/forget-password", url.Values{"email": {email}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
 	})
 	t.Run("TestRegisterSuccess", func(t *testing.T) {
 		resp, err := http.PostForm(URL+"/auth/register", url.Values{"email": {email}, "password": {passw}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		if resp.StatusCode != 200 {
 			body, err := ioutil.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			t.Error(string(body))
 		}
 	})
@@ -150,7 +151,7 @@ func TestRouterGinAPI(t *testing.T) {
 			return nil
 		})
 		resp, err := http.PostForm(URL+"/auth/forget-password", url.Values{"email": {email}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
 	})
@@ -165,34 +166,34 @@ func TestRouterGinAPI(t *testing.T) {
 	})
 	t.Run("TestAccessPrivateNotAuthorized", func(t *testing.T) {
 		resp, err := http.Get(URL + "/private")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 401, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "{\"error\":\"unauthorized\"}\n", string(body))
 	})
 	t.Run("TestLoginDisabled", func(t *testing.T) {
 		resp, err := http.Get(fmt.Sprintf("%s/auth/login?email=%s&password=%s", URL, email, passw))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 403, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "{\"error\":\"incorrect email or password\"}\n", string(body))
 	})
 	t.Run("TestActivateAccount", func(t *testing.T) {
 		u := getUser(t, email)
 		resp, err := http.Get(fmt.Sprintf("%s/auth/activate?token=%s", URL, u.ConfirmationToken))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 	})
 	t.Run("TestLoginSuccess", func(t *testing.T) {
 		resp, err := http.Get(fmt.Sprintf("%s/auth/login?email=%s&password=%s", URL, email, passw))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.True(t, strings.Contains(string(body), "jwt"), "Response does not contains jwt token")
 		cookies := resp.Cookies()
@@ -210,11 +211,11 @@ func TestRouterGinAPI(t *testing.T) {
 		req.Header.Set("X-Jwt", jwtTok)
 		c := http.DefaultClient
 		resp, err := c.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "private", string(body))
 	})
@@ -223,11 +224,11 @@ func TestRouterGinAPI(t *testing.T) {
 		req.Header.Set("X-Jwt", jwtTok)
 		c := http.DefaultClient
 		resp, err := c.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
 	})
@@ -241,7 +242,7 @@ func TestRouterGinAPI(t *testing.T) {
 			return nil
 		})
 		resp, err := http.PostForm(URL+"/auth/forget-password/", url.Values{"email": {email}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.True(t, exec)
 
@@ -253,30 +254,30 @@ func TestRouterGinAPI(t *testing.T) {
 		u := getUser(t, email)
 		oldPasswordHash := u.Password
 		resp, err := http.PostForm(fmt.Sprintf("%s/auth/change-password", URL), url.Values{"token": {u.ChangePasswordToken}, "password": {"newpassword"}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		if resp.StatusCode != 200 {
 			body, err := ioutil.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			t.Error(string(body))
 		}
 		u = getUser(t, email)
 		assert.NotEqual(t, oldPasswordHash, u.Password, "Password didn't changed")
 		err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte("newpassword"))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 	t.Run("TestChangePasswordWithBadTokenReturnError", func(t *testing.T) {
 		resp, err := http.PostForm(fmt.Sprintf("%s/auth/change-password", URL), url.Values{"token": {"badtoken"}, "password": {"newpassword"}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 400, resp.StatusCode)
 	})
 }
 
 func getUser(t *testing.T, email string) *storage.User {
 	s, err := storage.NewInMemory(db)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	u, err := s.GetUser(email)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return u
 }

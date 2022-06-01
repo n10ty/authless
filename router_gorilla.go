@@ -38,7 +38,7 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 	router.Path("/auth/logout").Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.LogoutHandler)
 	router.Path("/auth/register").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.RegistrationHandler)
 	router.Path("/auth/activate").Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.ActivationHandler)
-	router.Path("/auth/change-password/request").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ChangePasswordRequestHandler)
+	router.Path("/auth/forget-password").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ForgetPasswordRequestHandler)
 	router.Path("/auth/change-password").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ChangePasswordHandler)
 
 	if g.auth.config.Type == AuthTypeTemplate {
@@ -91,7 +91,7 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 				}
 				tplTxt.Execute(w, params)
 			})
-		router.Path("/forget-password").Methods(http.MethodGet).HandlerFunc(
+		router.Path("/forget-password/result").Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 				tplTxt, err := template.ParseGlob("template/forget_password_form.html")
@@ -108,6 +108,10 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 	}
 }
 
-func (g *GorillaAuth) SetActivationTokenSenderFunc(senderFunc ActivateAccountFunc) {
-	g.auth.SetActivationTokenSenderFunc(senderFunc)
+func (g *GorillaAuth) SetActivationTokenSenderFunc(f ActivateAccountFunc) {
+	g.auth.SetActivationTokenSenderFunc(f)
+}
+
+func (g *GorillaAuth) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
+	g.auth.SetChangePasswordRequestFunc(f)
 }

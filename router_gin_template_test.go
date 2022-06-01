@@ -8,6 +8,7 @@ import (
 	"github.com/n10ty/authless/token"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 	"io/ioutil"
 	"net/http"
@@ -98,16 +99,16 @@ func TestRouterRedirectGin(t *testing.T) {
 	t.Run("TestAccessPrivateNotAuthorizedRedirectToLogin", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, redirectURL+"/private", nil)
 		resp, err := httpClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, redirectURL+"/login", url.String())
 	})
 	t.Run("TestLoginUserNotExists", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
 		resp, err := httpClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/login?error=Incorrect email or password", url.String())
@@ -119,13 +120,13 @@ func TestRouterRedirectGin(t *testing.T) {
 			return nil
 		})
 		resp, err := http.PostForm(redirectURL+"/auth/forget-password", url.Values{"email": {email}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
 	})
 	t.Run("TestRegisterSuccess", func(t *testing.T) {
 		resp, err := httpClient.PostForm(redirectURL+"/auth/register", url.Values{"email": {email}, "password": {passw}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/success", url.String())
@@ -137,7 +138,7 @@ func TestRouterRedirectGin(t *testing.T) {
 			return nil
 		})
 		resp, err := http.PostForm(redirectURL+"/auth/forget-password", url.Values{"email": {email}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.False(t, exec)
 	})
@@ -145,13 +146,13 @@ func TestRouterRedirectGin(t *testing.T) {
 		u := getUser(t, email)
 		assert.NotEqual(t, u.ChangePasswordToken, "")
 		resp, err := httpClient.PostForm(fmt.Sprintf("%s/auth/change-password", redirectURL), url.Values{"token": {u.ChangePasswordToken}, "password": {"newpassword"}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/change-password/result?error=Bad request", url.String())
 		if resp.StatusCode != 302 {
 			body, err := ioutil.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			t.Error(string(body))
 		}
 	})
@@ -167,20 +168,20 @@ func TestRouterRedirectGin(t *testing.T) {
 	t.Run("TestLoginNotEnabledRedirectToError", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
 		resp, err := httpClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/login?error=Incorrect email or password", url.String())
 	})
 	t.Run("TestActivateAccount", func(t *testing.T) {
 		s, err := storage.NewInMemory(db)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		u, err := s.GetUser(email)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/activate?token=%s", redirectURL, u.ConfirmationToken), nil)
 		resp, err := httpClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/activate/result", url.String())
@@ -188,7 +189,7 @@ func TestRouterRedirectGin(t *testing.T) {
 	t.Run("TestLoginWrongPasswordRedirectError", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, "223"), nil)
 		resp, err := httpClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 
@@ -203,8 +204,8 @@ func TestRouterRedirectGin(t *testing.T) {
 	t.Run("TestLoginSuccess", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/auth/login?email=%s&password=%s", redirectURL, email, passw), nil)
 		resp, err := httpClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 301, resp.StatusCode)
+		require.NoError(t, err)
+		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 
 		cookies := resp.Cookies()
@@ -223,11 +224,11 @@ func TestRouterRedirectGin(t *testing.T) {
 		req.Header.Set("X-Jwt", jwtTok)
 		c := http.DefaultClient
 		resp, err := c.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "private", string(body))
 	})
 	t.Run("TestAccessPrivateUserStatus", func(t *testing.T) {
@@ -235,24 +236,24 @@ func TestRouterRedirectGin(t *testing.T) {
 		req.Header.Set("X-Jwt", jwtTok)
 		c := http.DefaultClient
 		resp, err := c.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, 200, resp.StatusCode)
 		body, err := ioutil.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "{\"name\":\"a@a.a\",\"id\":\"d656370089fedbd4313c67bfdc24151fb7c0fe8b\"}", string(body))
 	})
 	t.Run("TestForgetPasswordWithEmptyEmailRedirectError", func(t *testing.T) {
 		resp, err := httpClient.PostForm(redirectURL+"/auth/forget-password", url.Values{"email": {"a."}})
-		assert.NoError(t, err)
-		assert.Equal(t, 301, resp.StatusCode)
+		require.NoError(t, err)
+		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/forget-password/result?error=Bad request", url.String())
 	})
 	t.Run("TestForgetPasswordRequestWithNotExistsUserIsOk", func(t *testing.T) {
 		resp, err := httpClient.PostForm(redirectURL+"/auth/forget-password", url.Values{"email": {"a.22333@ddd.rrr"}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/forget-password/result", url.String())
@@ -268,7 +269,7 @@ func TestRouterRedirectGin(t *testing.T) {
 			return nil
 		})
 		resp, err := httpClient.PostForm(redirectURL+"/auth/forget-password", url.Values{"email": {email}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		assert.True(t, exec)
 
@@ -278,13 +279,13 @@ func TestRouterRedirectGin(t *testing.T) {
 	})
 	t.Run("TestChangePasswordUnexistsUserReturnOk", func(t *testing.T) {
 		resp, err := httpClient.PostForm(fmt.Sprintf("%s/auth/change-password", redirectURL), url.Values{"token": {"123"}, "password": {"newpassword"}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/change-password/result", url.String())
 		if resp.StatusCode != 302 {
 			body, err := ioutil.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			t.Error(string(body))
 		}
 	})
@@ -292,13 +293,13 @@ func TestRouterRedirectGin(t *testing.T) {
 		u := getUser(t, email)
 		oldPasswordHash := u.Password
 		resp, err := httpClient.PostForm(fmt.Sprintf("%s/auth/change-password", redirectURL), url.Values{"token": {u.ChangePasswordToken}, "password": {"newpassword"}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 302, resp.StatusCode)
 		url, err := resp.Location()
 		assert.Equal(t, redirectURL+"/change-password/result", url.String())
 		if resp.StatusCode != 302 {
 			body, err := ioutil.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			t.Error(string(body))
 		}
 		u = getUser(t, email)
@@ -306,6 +307,30 @@ func TestRouterRedirectGin(t *testing.T) {
 		err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(passw))
 		assert.ErrorIs(t, err, bcrypt.ErrMismatchedHashAndPassword)
 		err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte("newpassword"))
-		assert.NoError(t, err)
+		require.NoError(t, err)
+	})
+	t.Run("TestChangePasswordPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/change-password", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestChangePasswordResultPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/change-password/result", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestForgetPasswordPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/forget-password", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestForgetPasswordResultPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/forget-password/result", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 	})
 }

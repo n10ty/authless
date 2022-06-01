@@ -130,12 +130,12 @@ func (a *TemplateAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Reques
 	if a.successRedirectUrl == "" {
 		a.successRedirectUrl = "/"
 	}
-	http.Redirect(w, r, a.successRedirectUrl, http.StatusMovedPermanently)
+	http.Redirect(w, r, a.successRedirectUrl, http.StatusFound)
 }
 
 func (a *TemplateAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	a.jwtService.Reset(w)
-	http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func (a *TemplateAuthHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
@@ -217,12 +217,12 @@ func (a *TemplateAuthHandler) getCredentials(w http.ResponseWriter, r *http.Requ
 	}, nil
 }
 
-func (a *TemplateAuthHandler) ChangePasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
+func (a *TemplateAuthHandler) ForgetPasswordRequestHandler(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	log.Info(email)
 	if len(email) < 5 {
 		log.Info("change password: empty email")
-		http.Redirect(w, r, "/forget-password/result?error=Bad request", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/forget-password/result?error=Bad request", http.StatusFound)
 		return
 	}
 
