@@ -34,28 +34,28 @@ func (g *GorillaAuth) AuthRequired(handler func(w http.ResponseWriter, r *http.R
 }
 
 func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
-	router.Path("/auth/login").HandlerFunc(g.auth.authHandler.LoginHandler)
-	router.Path("/auth/logout").Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.LogoutHandler)
-	router.Path("/auth/register").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.RegistrationHandler)
-	router.Path("/auth/activate").Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.ActivationHandler)
-	router.Path("/auth/forget-password").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ForgetPasswordRequestHandler)
-	router.Path("/auth/change-password").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ChangePasswordHandler)
+	router.Path(routeAuthLogin).HandlerFunc(g.auth.authHandler.LoginHandler)
+	router.Path(routeAuthLogout).Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.LogoutHandler)
+	router.Path(routeAuthRegister).Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.RegistrationHandler)
+	router.Path(routeAuthActivate).Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.ActivationHandler)
+	router.Path(routeAuthForgetPassword).Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ForgetPasswordRequestHandler)
+	router.Path(routeAuthChangePassword).Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ChangePasswordHandler)
 
 	if g.auth.config.Type == AuthTypeTemplate {
-		router.Path("/login").Methods(http.MethodGet).HandlerFunc(
+		router.Path(routeLogin).Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				writeTemplate(w, "template/login_form.html", map[string]any{"error": template.HTML(r.FormValue("error"))})
 			})
 
-		router.Path("/logout").Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.LogoutHandler)
-		router.Path("/register").Methods(http.MethodGet).HandlerFunc(
+		router.Path(routeLogout).Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.LogoutHandler)
+		router.Path(routeRegister).Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				writeTemplate(w, "template/registration_form.html", map[string]any{"error": template.HTML(r.FormValue("error"))})
 			})
-		router.Path("/register/success").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.Path(routeRegisterSuccess).Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			writeTemplate(w, "template/registration_result.html", map[string]any{"message": template.HTML(r.FormValue("Successfully registered"))})
 		})
-		router.Path("/activate/result").Methods(http.MethodGet).HandlerFunc(
+		router.Path(routeActivateResult).Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				params := make(map[string]any)
 				err := r.FormValue("error")
@@ -66,11 +66,11 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 				}
 				writeTemplate(w, "template/activation_result.html", params)
 			})
-		router.Path("/forget-password").Methods(http.MethodGet).HandlerFunc(
+		router.Path(routeForgetPassword).Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				writeTemplate(w, "template/forget_password_form.html", map[string]any{})
 			})
-		router.Path("/forget-password/result").Methods(http.MethodGet).HandlerFunc(
+		router.Path(routeForgetPasswordResult).Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				params := make(map[string]any)
 				err := r.FormValue("error")
@@ -81,12 +81,12 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 				}
 				writeTemplate(w, "template/forget_password_result.html", params)
 			})
-		router.Path("/change-password").Methods(http.MethodGet).HandlerFunc(
+		router.Path(routeChangePassword).Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				writeTemplate(w, "template/change_password_form.html", map[string]any{"error": template.HTML(r.FormValue("error")), "token": template.HTML(r.FormValue("token"))})
 			})
 
-		router.Path("/change-password/result").Methods(http.MethodGet).HandlerFunc(
+		router.Path(routeChangePasswordResult).Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				writeTemplate(w, "template/change_password_result.html", map[string]any{"error": template.HTML(r.FormValue("error"))})
 			})

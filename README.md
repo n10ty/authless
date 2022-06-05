@@ -50,7 +50,7 @@ func main() {
 You can create config object in code:
 ```go
 config := &authless.Config{
-    Host:               "localhost",
+    Host:               "example.com", // this will used for activation/forget-password links
     Secret:             "d123",
     DisableXSRF:        true,
     TokenDuration:      time.Minute,
