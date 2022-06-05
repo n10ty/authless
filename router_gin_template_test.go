@@ -309,6 +309,37 @@ func TestRouterRedirectGin(t *testing.T) {
 		err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte("newpassword"))
 		require.NoError(t, err)
 	})
+
+	t.Run("TestLoginPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/login", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestLogoutPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/logout", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 302, resp.StatusCode)
+	})
+	t.Run("TestRegisterPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/register", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestRegisterResultPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/register/success", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestActivateResultPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/activate/result", redirectURL), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
 	t.Run("TestChangePasswordPageExists", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/change-password", redirectURL), nil)
 		resp, err := httpClient.Do(req)

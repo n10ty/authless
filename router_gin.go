@@ -44,11 +44,11 @@ func (g *GinAuth) InitServiceRoutes(router *gin.Engine) {
 			c.HTML(http.StatusOK, "login_form.html", gin.H{"error": c.Query("error")})
 		})
 		router.GET("/logout", gin.WrapF(g.auth.authHandler.LogoutHandler))
-		router.GET("/register/success", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "registration_result.html", gin.H{"message": "Successfully registered"})
-		})
 		router.GET("/register", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "registration_form.html", gin.H{"error": c.Query("error")})
+		})
+		router.GET("/register/success", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "registration_result.html", gin.H{"message": "Successfully registered"})
 		})
 		router.GET("/activate/result", func(c *gin.Context) {
 			err := c.Query("error")

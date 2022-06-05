@@ -42,69 +42,54 @@ func (g *GorillaAuth) InitServiceRoutes(router *mux.Router) {
 	router.Path("/auth/change-password").Methods(http.MethodPost).HandlerFunc(g.auth.authHandler.ChangePasswordHandler)
 
 	if g.auth.config.Type == AuthTypeTemplate {
-		router.Path("/success").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "registration_result.html")
-		})
-
 		router.Path("/login").Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				tplTxt, err := template.ParseGlob("template/login_form.html")
-				if err != nil {
-					log.Errorf("Error during load html template login_form.html: %s", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
-					return
-				}
-				tplTxt.Execute(w, map[string]any{"error": template.HTML(r.FormValue("error"))})
+				writeTemplate(w, "template/login_form.html", map[string]any{"error": template.HTML(r.FormValue("error"))})
 			})
 
 		router.Path("/logout").Methods(http.MethodGet).HandlerFunc(g.auth.authHandler.LogoutHandler)
 		router.Path("/register").Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				tplTxt, err := template.ParseGlob("template/registration_form.html")
-				if err != nil {
-					log.Errorf("Error during load html template registration_form.html: %s", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
-					return
-				}
-				tplTxt.Execute(w, map[string]any{"error": template.HTML(r.FormValue("error"))})
+				writeTemplate(w, "template/registration_form.html", map[string]any{"error": template.HTML(r.FormValue("error"))})
 			})
-
+		router.Path("/register/success").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			writeTemplate(w, "template/registration_result.html", map[string]any{"message": template.HTML(r.FormValue("Successfully registered"))})
+		})
 		router.Path("/activate/result").Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				errorMessage := r.FormValue("error")
-				var templatePath string
-				params := map[string]any{}
-				if errorMessage != "" {
-					templatePath = "template/activation_error.html"
-					params["error"] = errorMessage
+				params := make(map[string]any)
+				err := r.FormValue("error")
+				if err != "" {
+					params["error"] = err
 				} else {
-					templatePath = "template/activation_success.html"
+					params["message"] = "Activated successfully"
 				}
-				tplTxt, err := template.ParseGlob(templatePath)
-				if err != nil {
-					log.Errorf("Error during load html template activation_error.html: %s", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
-					return
-				}
-				tplTxt.Execute(w, params)
+				writeTemplate(w, "template/activation_result.html", params)
+			})
+		router.Path("/forget-password").Methods(http.MethodGet).HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				writeTemplate(w, "template/forget_password_form.html", map[string]any{})
 			})
 		router.Path("/forget-password/result").Methods(http.MethodGet).HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				tplTxt, err := template.ParseGlob("template/forget_password_form.html")
-				if err != nil {
-					log.Errorf("Error during load html template registration_form.html: %s", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
-					return
+				params := make(map[string]any)
+				err := r.FormValue("error")
+				if err != "" {
+					params["error"] = err
+				} else {
+					params["message"] = "Change password request has been sent. Please check your email."
 				}
-				tplTxt.Execute(w, map[string]any{"error": template.HTML(r.FormValue("error"))})
+				writeTemplate(w, "template/forget_password_result.html", params)
 			})
-		router.Path("/success").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "registration_result.html")
-		})
+		router.Path("/change-password").Methods(http.MethodGet).HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				writeTemplate(w, "template/change_password_form.html", map[string]any{"error": template.HTML(r.FormValue("error")), "token": template.HTML(r.FormValue("token"))})
+			})
+
+		router.Path("/change-password/result").Methods(http.MethodGet).HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				writeTemplate(w, "template/change_password_result.html", map[string]any{"error": template.HTML(r.FormValue("error"))})
+			})
 	}
 }
 
@@ -114,4 +99,16 @@ func (g *GorillaAuth) SetActivationTokenSenderFunc(f ActivateAccountFunc) {
 
 func (g *GorillaAuth) SetChangePasswordRequestFunc(f ChangePasswordRequestFunc) {
 	g.auth.SetChangePasswordRequestFunc(f)
+}
+
+func writeTemplate(w http.ResponseWriter, path string, params map[string]any) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tplTxt, err := template.ParseGlob(path)
+	if err != nil {
+		log.Errorf("Error during load html template registration_form.html: %s", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	tplTxt.Execute(w, params)
 }

@@ -306,6 +306,36 @@ func TestRedirectGorilla(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("TestLoginPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/login", redirectURLGorilla), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestLogoutPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/logout", redirectURLGorilla), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 302, resp.StatusCode)
+	})
+	t.Run("TestRegisterPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/register", redirectURLGorilla), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestRegisterResultPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/register/success", redirectURLGorilla), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
+	t.Run("TestActivateResultPageExists", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/activate/result", redirectURLGorilla), nil)
+		resp, err := httpClient.Do(req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
 	t.Run("TestChangePasswordPageExists", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/change-password", redirectURLGorilla), nil)
 		resp, err := httpClient.Do(req)
@@ -326,12 +356,6 @@ func TestRedirectGorilla(t *testing.T) {
 	})
 	t.Run("TestForgetPasswordResultPageExists", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/forget-password/result", redirectURLGorilla), nil)
-		resp, err := httpClient.Do(req)
-		require.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-	})
-	t.Run("TestActivateResultPageExists", func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/activate/result", redirectURLGorilla), nil)
 		resp, err := httpClient.Do(req)
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
