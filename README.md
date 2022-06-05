@@ -267,13 +267,13 @@ Vars: `{{.error}}` `{{.message}}`
 - [x] Add gorilla http router
 - [x] Add default http router
 - [x] Forget password mux
-- [ ] Forget password gorilla
+- [x] Forget password gorilla
 - [x] Get rid of /r/
 - [x] Add global auth.GetUser method
 - [x] Fully get rid of authz package
 - [ ] Load default html template
 - [ ] Validate html present
-- [ ] Finish README
+- [x] Finish README
 - [ ] Add postgres
 - [ ] Validate config
 - [ ] Pass full url to forget pass/validate acc functions
@@ -282,3 +282,5 @@ Vars: `{{.error}}` `{{.message}}`
 - [ ] Routes as const
 - [ ] Min config to start: storage only
 - [ ] Check successurl
+- [ ] Add "Activate password" callback
+- [ ] Audit log
