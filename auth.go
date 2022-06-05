@@ -63,7 +63,6 @@ func newAuth(config *Config, storage storage.Storage) *Auth {
 		SendJWTHeader:   opts.SendJWTHeader,
 		JWTQuery:        opts.JWTQuery,
 		Issuer:          config.Host,
-		AudSecrets:      opts.AudSecrets,
 		SameSite:        opts.SameSiteCookie,
 	})
 
@@ -121,8 +120,4 @@ type Opts struct {
 
 	URL       string          // root url for the rest service, i.e. http://blah.example.com, required
 	Validator token.Validator // validator allows to reject some valid tokens with user-defined logic
-
-	AudSecrets bool // allow multiple secrets (secret per aud)
-	//Logger           logger.L                 // logger interface, default is no logging at all
-	//RefreshCache     middleware.RefreshCache  // optional cache to keep refreshed tokens
 }
