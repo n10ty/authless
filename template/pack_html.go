@@ -5,15 +5,15 @@ package main
 
 import (
 	"flag"
-	log "github.com/sirupsen/logrus"
-	"github.com/stoewer/go-strcase"
 	"io/ioutil"
-	"os"
+	log "github.com/sirupsen/logrus"
 	"strings"
+	"os"
+	"github.com/stoewer/go-strcase"
 )
 
 func main() {
-	var path, output *string
+	var path *string
 	path = flag.String("path", "./template", "Path to folder with templates")
 	output = flag.String("output", "template.go", "Output file with packed templates")
 	flag.Parse()
@@ -23,7 +23,7 @@ func main() {
 		log.Error(err)
 	}
 
-	templateFile, err := os.OpenFile(*path+"/"+*output, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	templateFile, err := os.OpenFile(*path+"/"+"template.go", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		log.Error(err)
 	}
